@@ -163,7 +163,6 @@ io.on('connection', async (socket) => {
             await new Message(msgData).save();
             
             io.to(`${shopId}_${data.targetUserId}`).emit('newMessage', msgData);
-            socket.emit('newMessage', msgData); 
         });
 
         // ★★★ 新增：管理員打字狀態 ★★★
