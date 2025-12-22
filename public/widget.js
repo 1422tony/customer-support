@@ -1,13 +1,12 @@
 (function() {
-    console.log(">>> Widget.js (v6.0 自動網址版) 啟動...");
+    console.log(">>> Widget.js (v7.0 正式雲端版) 啟動...");
 
-    // ... (保留原本的 renderUI 函式，因為您沒給我新的 CSS，請維持您原本那段 renderUI 代碼) ...
-    // --- 這裡請貼上您原本漂亮的 renderUI 函式 ---
+    // ---------------------------------------------------------
+    // 1. 定義 UI 繪製函式 (維持原本漂亮的 UI)
+    // ---------------------------------------------------------
     function renderUI() {
         if (document.getElementById('cb-container')) return;
-        // ... (這裡內容維持不變)
-        // 簡單來說，您不用改動 renderUI 裡面的任何 CSS
-        // 我只列出 socket 連線部分的修改
+
         var style = document.createElement('style');
         style.innerHTML = `
             #cb-container { position: fixed; right: 20px; bottom: 48px; z-index: 2147483647; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; pointer-events: auto; }
@@ -48,7 +47,9 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderUI);
     else renderUI();
     
-    // --- 連線邏輯 ---
+    // ---------------------------------------------------------
+    // 2. 處理資料與連線
+    // ---------------------------------------------------------
     var config = window.ChatWidgetConfig || {};
     if (!config.shopId) { var s = document.currentScript; if(s) config.shopId = s.getAttribute('data-shop-id'); }
     if (!config.shopId) return;
@@ -68,23 +69,16 @@
     script.src = "https://cdn.socket.io/4.7.2/socket.io.min.js";
     
     script.onload = function() {
-        // ★ 自動判斷網址：
-        // 如果 widget.js 是從 render 載入的，就連到 render
-        // 如果是用 ngrok，就連到 ngrok
-        var src = document.currentScript ? document.currentScript.src : '';
-        var SERVER_URL = 'https://leonore-untranspired-smudgily.ngrok-free.dev'; // 預設值 (Ngrok)
-        
-        // 如果這個腳本是從 Render 載入的，我們就直接用那個網域
-        if (src && src.includes('onrender.com')) {
-            var urlObj = new URL(src);
-            SERVER_URL = urlObj.origin; // 例如 https://myapp.onrender.com
-            console.log("[Widget] 自動偵測到正式環境:", SERVER_URL);
-        }
+        // ★★★ 關鍵修改：直接指定 Render 網址，不再自動偵測 ★★★
+        // 這樣絕對不會連到舊的 Ngrok
+        var SERVER_URL = 'https://customer-support-xtpx.onrender.com';
+
+        console.log("[Widget] 連線至伺服器:", SERVER_URL);
 
         var socket = io(SERVER_URL, {
             auth: { shopId: shopId, token: token, userId: userId, userName: userName, isAdmin: false },
-            transportOptions: { polling: { extraHeaders: { "ngrok-skip-browser-warning": "true" } } },
-            transports: ['polling', 'websocket'],
+            // 不需要 ngrok header 了
+            transports: ['websocket', 'polling'], 
         });
 
         socket.on('connect', function() {
