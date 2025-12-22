@@ -1,5 +1,5 @@
 (function() {
-    console.log(">>> Widget.js (v9.0 圖片上傳版) 啟動...");
+    console.log(">>> Widget.js (v10.0 圖片上傳 + HMAC安全版) 啟動...");
 
     function renderUI() {
         if (document.getElementById('cb-container')) return;
@@ -31,7 +31,7 @@
             .cb-msg.user { background: #0084ff; color: white; border-bottom-right-radius: 4px; }
             .cb-msg.admin { background: #e4e6eb; color: #050505; border-bottom-left-radius: 4px; }
             
-            /* ★ 新增：圖片訊息樣式 */
+            /* 圖片訊息樣式 */
             .cb-msg.image { background: transparent !important; padding: 0; }
             .cb-msg-img { max-width: 150px; border-radius: 8px; cursor: pointer; border: 2px solid #ddd; }
 
@@ -42,7 +42,7 @@
             .typing-dots::after { content: '...'; animation: typing 1.5s infinite; }
             @keyframes typing { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
 
-            /* ★ 修改：Footer 加入上傳按鈕 */
+            /* Footer 加入上傳按鈕 */
             #cb-footer { padding: 10px; border-top: 1px solid #ddd; background: #fff; display: flex; align-items: center; gap: 8px; }
             #cb-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; background: #f0f2f5; font-size: 16px; }
             
@@ -90,6 +90,7 @@
     var token = config.token;
     var userId = config.userId;
     var userName = config.userName;
+    var signature = config.signature; // ★★★ 1. 讀取簽章 ★★★
     
     var autoReplyEnabled = config.autoReplyEnabled; 
     var offlineMsg = config.offlineMsg || "現在是非營業時間，我們會盡快回覆您。";
@@ -108,7 +109,14 @@
     script.onload = function() {
         var SERVER_URL = 'https://customer-support-xtpx.onrender.com';
         var socket = io(SERVER_URL, {
-            auth: { shopId: shopId, token: token, userId: userId, userName: userName, isAdmin: false },
+            auth: { 
+                shopId: shopId, 
+                token: token, 
+                userId: userId, 
+                userName: userName, 
+                signature: signature, // ★★★ 2. 將簽章傳送給後端驗證 ★★★
+                isAdmin: false 
+            },
             transports: ['websocket', 'polling'], 
         });
 
@@ -124,7 +132,7 @@
             localStorage.setItem(GUEST_KEY, data.userId);
         });
 
-        // ★★★ 修改：支援圖片顯示 ★★★
+        // 支援圖片顯示
         function addMsg(msg) {
             var list = document.getElementById('cb-list');
             if(!list) return;
@@ -177,7 +185,7 @@
             }
         });
 
-        // ★★★ 修改：監聽上傳與發送 ★★★
+        // 監聽上傳與發送
         var bindInterval = setInterval(function(){
             var input = document.getElementById('cb-input');
             var fileInput = document.getElementById('cb-file-input');

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>客服系統測試頁面</title>
+    <title>客服系統測試頁面 (HMAC版)</title>
     <style>
         body { font-family: sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
         .container { max-width: 800px; margin: 50px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -12,14 +12,24 @@
         .product-card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-top: 20px; display: flex; align-items: center; gap: 20px; }
         .product-img { width: 100px; height: 100px; background: #eee; display: flex; align-items: center; justify-content: center; color: #999; }
         .btn { padding: 10px 20px; background: #0084ff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        
+        /* 提示區塊 */
+        .notice { background: #fff3cd; color: #856404; padding: 10px; border-radius: 4px; margin-bottom: 20px; font-size: 14px; border: 1px solid #ffeeba; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>開發測試專用店</h1>
-        <p>這是一個模擬的前台頁面，用來測試 Chat Widget 的功能。</p>
-        <p>當前的商店 ID 為：<code>shop_test</code></p>
+        <h1>開發測試專用店 (HMAC Enabled)</h1>
+        
+        <div class="notice">
+            <strong>⚠️ 開發者注意：</strong><br>
+            此頁面使用 JavaScript 模擬後端 HMAC 加密，方便您測試連線。<br>
+            正式環境 (Liquid) 請勿將 Secret Key 寫在前端代碼中！
+        </div>
+
+        <p>當前的商店 ID 為：<code>test</code></p>
+        <p>模擬使用者 ID：<code>user_sim_001</code></p>
         
         <div class="product-card">
             <div class="product-img">商品圖</div>
@@ -31,17 +41,32 @@
         </div>
     </div>
 
-    <script>
-        // 這裡模擬我們剛剛在 server.js 新增的那間 "shop_test"
-        window.ChatWidgetConfig = {
-            shopId: "test",         // 對應 server.js 的 shop_test
-            token: "9999",     // 對應 server.js 的 token
-            
-            // 模擬已登入的使用者 (如果要測訪客，把下面兩行註解掉即可)
-            userId: "user_sim_001",      
-            userName: "模擬客戶小明",
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
-            // 離線自動回復設定 (模擬後台設定)
+    <script>
+        // 模擬設定
+        var shopId = "test";
+        var token = "9999";
+        var userId = "user_sim_001";
+        var userName = "模擬客戶小明";
+        
+        // ★★★ 測試頁專用：前端模擬 HMAC 簽章 ★★★
+        // 注意：這是在模擬 Liquid 伺服器的行為
+        var secretKey = "my_super_secret_key_2025"; // 必須跟 server.js 設定的一樣
+        
+        // 計算簽章: HMAC-SHA256( userId, secretKey )
+        var signature = CryptoJS.HmacSHA256(userId, secretKey).toString(CryptoJS.enc.Hex);
+        
+        console.log("模擬生成的簽章:", signature);
+
+        window.ChatWidgetConfig = {
+            shopId: shopId,
+            token: token,
+            userId: userId,
+            userName: userName,
+            signature: signature, // ★ 帶上簽章，不然會被踢成訪客
+
+            // 離線自動回復設定
             autoReplyEnabled: true,
             startHour: 9,
             endHour: 18,

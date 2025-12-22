@@ -5,7 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
-// ★ 新增圖片上傳套件
+// ★ 圖片上傳套件
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
@@ -38,7 +38,7 @@ const MessageSchema = new mongoose.Schema({
     userId: String,
     userName: String,
     text: String,     // 如果是圖片，這裡會存 "https://res.cloudinary.....jpg"
-    msgType: { type: String, default: 'text' }, // ★ 新增：分辨是 'text' 還是 'image'
+    msgType: { type: String, default: 'text' }, // 分辨是 'text' 還是 'image'
     sender: String,
     timestamp: { type: Number, default: Date.now }
 });
@@ -46,8 +46,7 @@ const MessageSchema = new mongoose.Schema({
 const Shop = mongoose.model('Shop', ShopSchema);
 const Message = mongoose.model('Message', MessageSchema);
 
-// --- ★★★ 3. 圖片上傳設定 (Cloudinary) ★★★ ---
-// 請去 Cloudinary Dashboard 複製您的資料填入下方
+// --- 3. 圖片上傳設定 (Cloudinary) ---
 cloudinary.config({
     cloud_name: 'djvv2fltj', 
     api_key: '551167384221725', 
@@ -59,11 +58,11 @@ const storage = new CloudinaryStorage({
     params: {
         folder: 'chat-app', // 圖片會存在這個資料夾
         allowed_formats: ['jpg', 'png', 'jpeg', 'gif'],
-        // ★★★ 新增：自動壓縮與縮圖設定 ★★★
+        // 自動壓縮與縮圖設定
         transformation: [
-            { width: 1000, crop: "limit" }, // 寬度限制最大 1000px (手機看夠清楚了)
-            { quality: "auto" },            // 自動調整品質 (肉眼看不出差異，但檔案變超小)
-            { fetch_format: "auto" }        // 自動轉成 WebP 等高效格式
+            { width: 1000, crop: "limit" }, 
+            { quality: "auto" },            
+            { fetch_format: "auto" }        
         ]
     },
 });
@@ -79,13 +78,11 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
-// ★★★ 新增：圖片上傳 API ★★★
-// 前端發送 POST /upload，這裡回傳圖片網址
+// 圖片上傳 API
 app.post('/upload', upload.single('image'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
-    // 回傳 Cloudinary 的圖片網址
     res.json({ url: req.file.path });
 });
 
@@ -95,18 +92,33 @@ const io = new Server(server, {
     transports: ['websocket', 'polling']
 });
 
-// --- 驗證邏輯 ---
+// --- 驗證邏輯 (已修正) ---
 function verifyIdentity(shopConfig, authData) {
     const { token, signature, userId, userName } = authData;
-    if (shopConfig.verificationType === 'token') {
+
+    // 1. 如果資料庫還沒設定 secretKey，降級檢查 Token
+    if (!shopConfig.secretKey) {
         return String(token).trim() === String(shopConfig.publicToken).trim();
     }
-    if (shopConfig.verificationType === 'hmac') {
-        if (!signature || !shopConfig.secretKey) return false;
-        const payload = `${shopConfig.shopId}${userId}${userName}`;
-        const expectedSig = crypto.createHmac('sha256', shopConfig.secretKey).update(payload).digest('hex');
+
+    // 2. 如果有傳簽章，進行 HMAC 驗證
+    if (signature) {
+        // ★★★ 關鍵修正：Payload 必須跟 Liquid 端完全一致 (只包含 userId) ★★★
+        const payload = String(userId); 
+
+        const expectedSig = crypto
+            .createHmac('sha256', shopConfig.secretKey)
+            .update(payload)
+            .digest('hex');
+
+        console.log(`[驗證] User: ${userId}`);
+        console.log(`       Client Sig: ${signature}`);
+        console.log(`       Server Sig: ${expectedSig}`);
+
         return expectedSig === signature;
     }
+    
+    // 3. 如果沒簽章但有 Key，視為驗證失敗 (或者您可以選擇降級)
     return false;
 }
 
@@ -114,29 +126,38 @@ function verifyIdentity(shopConfig, authData) {
 async function initDefaultShop() {
     // 1. 原本的 Cyberbiz 商店
     const defaultId = 'genius_0201';
-    if (!(await Shop.findOne({ shopId: defaultId }))) {
-        await new Shop({
-            shopId: defaultId,
-            password: '0201',
-            name: '天才美術社 (Cyberbiz)',
-            publicToken: 'genius_0201_token_888',
-            verificationType: 'token'
-        }).save();
-        console.log(`[系統] 已建立預設商店: ${defaultId}`);
-    }
+    // 這裡使用 updateOne 加上 upsert: true，確保如果商店存在會更新 secretKey
+    await Shop.updateOne(
+        { shopId: defaultId },
+        {
+            $set: {
+                password: '0201',
+                name: '天才美術社 (Cyberbiz)',
+                publicToken: 'genius_0201_token_888',
+                verificationType: 'token',
+                secretKey: "my_super_secret_key_2025" // 確保 Key 被寫入
+            }
+        },
+        { upsert: true }
+    );
+    console.log(`[系統] 商店檢查/更新完成: ${defaultId}`);
 
-    // 2. 第二個測試用商店 (shop_test)
+    // 2. 測試用商店
     const testId = 'test';
-    if (!(await Shop.findOne({ shopId: testId }))) {
-        await new Shop({
-            shopId: testId,
-            password: '1234', 
-            name: '開發測試專用店',
-            publicToken: '9999',
-            verificationType: 'token'
-        }).save();
-        console.log(`[系統] 已建立測試商店: ${testId}`);
-    }
+    await Shop.updateOne(
+        { shopId: testId },
+        {
+            $set: {
+                password: '1234', 
+                name: '開發測試專用店',
+                publicToken: '9999',
+                verificationType: 'token',
+                secretKey: "my_super_secret_key_2025"
+            }
+        },
+        { upsert: true }
+    );
+    console.log(`[系統] 商店檢查/更新完成: ${testId}`);
 }
 mongoose.connection.once('open', initDefaultShop);
 
@@ -196,13 +217,12 @@ io.on('connection', async (socket) => {
                 userId: data.targetUserId,
                 userName: 'Admin',
                 text: data.text,
-                msgType: data.msgType || 'text', // ★ 記得要存訊息類型
+                msgType: data.msgType || 'text',
                 sender: 'admin',
                 timestamp: Date.now()
             };
             await new Message(msgData).save();
             
-            // 廣播給 User 和 Admin 自己 (不需額外 socket.emit)
             io.to(`${shopId}_${data.targetUserId}`).emit('newMessage', msgData);
         });
 
@@ -229,11 +249,23 @@ io.on('connection', async (socket) => {
 
     let { userId, userName } = auth;
     let isVerified = false;
-    if (userId) {
+    
+    // 如果是訪客(guest_開頭)，跳過 HMAC 驗證
+    if (userId && !userId.startsWith('guest_')) {
         isVerified = verifyIdentity(shopConfig, auth);
+    } else if (userId && userId.startsWith('guest_')) {
+        isVerified = true; // 訪客模式直接通過
     }
 
+    // 驗證失敗處理
     if (!isVerified) {
+        console.log(`[驗證失敗] User: ${userId}`);
+        // 強制轉為訪客
+        userId = 'guest_' + Math.random().toString(36).substr(2, 9);
+        userName = '訪客';
+        socket.emit('forceGuestMode', { userId, userName });
+    } else if (!userId) {
+        // 沒有 userId 的情況 (第一次來)
         userId = 'guest_' + Math.random().toString(36).substr(2, 9);
         userName = '訪客';
         socket.emit('forceGuestMode', { userId, userName });
@@ -253,15 +285,13 @@ io.on('connection', async (socket) => {
             userId,
             userName,
             text: data.text,
-            msgType: data.msgType || 'text', // ★ 記得要存訊息類型
+            msgType: data.msgType || 'text', 
             sender: 'user',
             timestamp: Date.now()
         };
         await new Message(msgData).save();
 
-        // 廣播給房間內 (自己 + 管理員)
         io.to(roomName).emit('newMessage', msgData);
-        // 通知所有管理員更新列表
         io.to(`admin_${shopId}`).emit('updateUserList', msgData);
     });
 
