@@ -59,6 +59,12 @@ const storage = new CloudinaryStorage({
     params: {
         folder: 'chat-app', // 圖片會存在這個資料夾
         allowed_formats: ['jpg', 'png', 'jpeg', 'gif'],
+        // ★★★ 新增：自動壓縮與縮圖設定 ★★★
+        transformation: [
+            { width: 1000, crop: "limit" }, // 寬度限制最大 1000px (手機看夠清楚了)
+            { quality: "auto" },            // 自動調整品質 (肉眼看不出差異，但檔案變超小)
+            { fetch_format: "auto" }        // 自動轉成 WebP 等高效格式
+        ]
     },
 });
 const upload = multer({ storage: storage });
