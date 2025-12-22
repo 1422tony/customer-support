@@ -73,17 +73,30 @@ function verifyIdentity(shopConfig, authData) {
 
 // --- 初始化預設商店 ---
 async function initDefaultShop() {
-    const defaultId = 'shop_cyberbiz';
-    const exists = await Shop.findOne({ shopId: defaultId });
-    if (!exists) {
+    // 1. 原本的 Cyberbiz 商店
+    const defaultId = 'genius_0201';
+    if (!(await Shop.findOne({ shopId: defaultId }))) {
         await new Shop({
             shopId: defaultId,
-            password: 'admin',
-            name: '我的測試商店',
-            publicToken: 'cb_public_token_888',
+            password: '0201',
+            name: '天才美術社 (Cyberbiz)',
+            publicToken: 'genius_0201_token_888',
             verificationType: 'token'
         }).save();
         console.log(`[系統] 已建立預設商店: ${defaultId}`);
+    }
+
+    // 2. ★ 新增：第二個測試用商店 (shop_test)
+    const testId = 'test';
+    if (!(await Shop.findOne({ shopId: testId }))) {
+        await new Shop({
+            shopId: testId,
+            password: '1234', // 測試用的簡單密碼
+            name: '開發測試專用店',
+            publicToken: '9999',
+            verificationType: 'token'
+        }).save();
+        console.log(`[系統] 已建立測試商店: ${testId}`);
     }
 }
 mongoose.connection.once('open', initDefaultShop);

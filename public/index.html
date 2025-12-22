@@ -3,89 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>客戶端測試 - 即時客服</title>
+    <title>客服系統測試頁面</title>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; }
-        #chat-widget { position: fixed; bottom: 20px; right: 20px; width: 350px; height: 500px; 
-                       background: white; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); 
-                       display: flex; flex-direction: column; overflow: hidden; }
-        #chat-header { background: #0084ff; color: white; padding: 15px; font-weight: bold; }
-        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .msg { max-width: 80%; padding: 8px 12px; border-radius: 15px; font-size: 14px; word-break: break-all; }
-        .msg.user { align-self: flex-end; background: #0084ff; color: white; }
-        .msg.admin { align-self: flex-start; background: #e4e6eb; color: black; }
-        #input-area { border-top: 1px solid #ddd; padding: 10px; display: flex; }
-        #msgInput { flex: 1; border: 1px solid #ddd; padding: 8px; border-radius: 20px; outline: none; }
+        body { font-family: sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
+        .container { max-width: 800px; margin: 50px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        p { line-height: 1.6; color: #666; }
+        .product-card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-top: 20px; display: flex; align-items: center; gap: 20px; }
+        .product-img { width: 100px; height: 100px; background: #eee; display: flex; align-items: center; justify-content: center; color: #999; }
+        .btn { padding: 10px 20px; background: #0084ff; color: white; border: none; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <h1>這是您的 Cyberbiz 商店模擬頁面</h1>
-    <p>右下角是即時客服小窗口。</p>
-
-    <div id="chat-widget">
-        <div id="chat-header">即時客服 - 在線中</div>
-        <div id="messages"></div>
-        <div id="input-area">
-            <input type="text" id="msgInput" placeholder="請輸入訊息...">
+    <div class="container">
+        <h1>開發測試專用店</h1>
+        <p>這是一個模擬的前台頁面，用來測試 Chat Widget 的功能。</p>
+        <p>當前的商店 ID 為：<code>shop_test</code></p>
+        
+        <div class="product-card">
+            <div class="product-img">商品圖</div>
+            <div>
+                <h3>超級好用的測試商品</h3>
+                <p>售價：$999</p>
+                <button class="btn">加入購物車</button>
+            </div>
         </div>
     </div>
 
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
-        const SERVER_URL = 'http://192.168.1.102:8188';
-        const socket = io(SERVER_URL);
-        
-        // 取得或生成唯一 ID
-        let userId = localStorage.getItem('chat_user_id');
-        if (!userId) {
-            userId = 'user_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('chat_user_id', userId);
-        }
+        // 這裡模擬我們剛剛在 server.js 新增的那間 "shop_test"
+        window.ChatWidgetConfig = {
+            shopId: "shop_test",         // 對應 server.js 的 shop_test
+            token: "test_token_999",     // 對應 server.js 的 token
+            
+            // 模擬已登入的使用者 (如果要測訪客，把下面兩行註解掉即可)
+            userId: "user_sim_001",      
+            userName: "模擬客戶小明",
 
-        // 加入房間
-        socket.emit('join', { userId, isAdmin: false });
-
-        // 接收歷史訊息 (解決刷新頁面問題)
-        socket.on('history', (history) => {
-            const container = document.getElementById('messages');
-            container.innerHTML = ''; // 清空避免重複顯示
-            history.forEach(appendMessage);
-            scrollToBottom();
-        });
-
-        // 接收新訊息 (即時同步)
-        socket.on('newMessage', (msg) => {
-            appendMessage(msg);
-            scrollToBottom();
-        });
-
-        function appendMessage(msg) {
-            const container = document.getElementById('messages');
-            const div = document.createElement('div');
-            div.className = `msg ${msg.sender === 'admin' ? 'admin' : 'user'}`;
-            div.innerText = msg.text;
-            container.appendChild(div);
-        }
-
-        function scrollToBottom() {
-            const container = document.getElementById('messages');
-            container.scrollTop = container.scrollHeight;
-        }
-
-        // 發送訊息
-        document.getElementById('msgInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && e.target.value.trim() !== '') {
-                const text = e.target.value;
-                socket.emit('sendMessage', {
-                    userId,
-                    text,
-                    sender: 'user',
-                    timestamp: Date.now()
-                });
-                e.target.value = '';
-            }
-        });
+            // 離線自動回復設定 (模擬後台設定)
+            autoReplyEnabled: true,
+            startHour: 9,
+            endHour: 18,
+            offlineMsg: "這是測試店的自動回復：現在下班囉！"
+        };
     </script>
+
+    <script src="https://customer-support-xtpx.onrender.com/widget.js" async></script>
+
 </body>
 </html>
