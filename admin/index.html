@@ -100,7 +100,10 @@
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
-        const SERVER = 'https://leonore-untranspired-smudgily.ngrok-free.dev'; // ★ 請確認網址 ★
+        // ★★★ 已修正：自動連線到當前網址 (Render) ★★★
+        // 這樣就不會再連到舊的 Ngrok，也不會有 CORS 錯誤
+        const SERVER = '/'; 
+        
         let socket;
         let activeUser = null;
         let unreadCounts = {}; 
@@ -124,7 +127,8 @@
 
             socket = io(SERVER, {
                 auth: { shopId: shop, isAdmin: true },
-                extraHeaders: { "ngrok-skip-browser-warning": "true" }
+                // 這裡不需要 ngrok header 了，因為我們在 Render 內網互通
+                transports: ['websocket', 'polling']
             });
 
             socket.on('connect', () => {
@@ -226,11 +230,10 @@
             list.prepend(div); 
         }
 
-        // ★ 核心修復：加入防重複機制 ★
+        // 防重複機制
         function renderMsg(msg) {
             const box = document.getElementById('messages');
             
-            // 檢查最後一條訊息，如果內容和發送者都一樣，就當作重複，不顯示
             const lastMsg = box.lastElementChild;
             if (lastMsg && 
                 lastMsg.innerText === msg.text && 
