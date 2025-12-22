@@ -15,7 +15,7 @@
             #cb-btn:active { transform: scale(0.95); }
             #cb-box { width: 340px; height: 480px; background: white; border-radius: 12px; display: none; flex-direction: column; border: 1px solid #eee; box-shadow: 0 5px 20px rgba(0,0,0,0.2); transform-origin: bottom right; animation: cbPop 0.2s ease-out; }
             @keyframes cbPop { from{opacity:0;transform:scale(0.8);} to{opacity:1;transform:scale(1);} }
-            @media (max-width: 768px) { #cb-container { bottom: 120px !important; right: 20px !important; } #cb-btn { width: 55px; height: 55px; } #cb-box { position: fixed; bottom: 0; right: 0; width: 100%; height: 100%; z-index: 2147483649; border-radius: 0; } #cb-close-mobile { display: block !important; cursor: pointer; font-size: 24px; padding: 0 10px;} }
+            @media (max-width: 768px) { #cb-container { bottom: 60px !important; right: 20px !important; } #cb-btn { width: 55px; height: 55px; } #cb-box { position: fixed; bottom: 0; right: 0; width: 100%; height: 100%; z-index: 2147483649; border-radius: 0; } #cb-close-mobile { display: block !important; cursor: pointer; font-size: 24px; padding: 0 10px;} }
             #cb-head { background: #0084ff; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;}
             #cb-list { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #f9f9f9; }
             .cb-msg { max-width: 80%; padding: 10px 14px; border-radius: 18px; font-size: 15px; word-break: break-word; }
