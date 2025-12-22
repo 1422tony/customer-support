@@ -4,17 +4,15 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
-const mongoose = require('mongoose'); // 改用 Mongoose
+const mongoose = require('mongoose');
 
 const app = express();
 
 // --- 1. 資料庫連線設定 (MongoDB) ---
-// Render 會透過環境變數注入 MONGO_URI
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
     console.error("❌ 嚴重錯誤：未設定 MONGO_URI 環境變數！");
-    // 本地開發時，如果沒有設定環境變數，程式會報錯提醒
 } else {
     mongoose.connect(MONGO_URI)
         .then(() => console.log('✅ MongoDB Atlas 連線成功'))
@@ -26,9 +24,9 @@ const ShopSchema = new mongoose.Schema({
     shopId: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     name: String,
-    secretKey: String, // 用於 HMAC 驗證
+    secretKey: String, 
     publicToken: String,
-    verificationType: { type: String, default: 'token' } // 'token' or 'hmac'
+    verificationType: { type: String, default: 'token' }
 });
 
 const MessageSchema = new mongoose.Schema({
@@ -37,17 +35,16 @@ const MessageSchema = new mongoose.Schema({
     userName: String,
     text: String,
     sender: String, // 'user' or 'admin'
-    timestamp: { type: Number, default: Date.now }
+    timestamp: { type: Number, default: Date.now } // ★ 這裡已經有時間戳記了
 });
 
-// 建立 Model
 const Shop = mongoose.model('Shop', ShopSchema);
 const Message = mongoose.model('Message', MessageSchema);
 
 // --- 3. 伺服器基礎設定 ---
 app.use(cors({ origin: true, credentials: true }));
 app.use((req, res, next) => {
-    res.setHeader('ngrok-skip-browser-warning', 'true'); // 保留給開發用
+    res.setHeader('ngrok-skip-browser-warning', 'true');
     next();
 });
 app.use(express.static(path.join(__dirname, 'public')));
@@ -74,23 +71,21 @@ function verifyIdentity(shopConfig, authData) {
     return false;
 }
 
-// --- 初始化預設商店 (防止資料庫空的無法登入) ---
+// --- 初始化預設商店 ---
 async function initDefaultShop() {
-    // 這裡可以寫死一個預設商店，方便您測試
     const defaultId = 'shop_cyberbiz';
     const exists = await Shop.findOne({ shopId: defaultId });
     if (!exists) {
         await new Shop({
             shopId: defaultId,
-            password: 'admin', // ★ 預設密碼
+            password: 'admin',
             name: '我的測試商店',
             publicToken: 'cb_public_token_888',
             verificationType: 'token'
         }).save();
-        console.log(`[系統] 已建立預設商店: ${defaultId} / 密碼: admin`);
+        console.log(`[系統] 已建立預設商店: ${defaultId}`);
     }
 }
-// 連線成功後嘗試初始化
 mongoose.connection.once('open', initDefaultShop);
 
 
@@ -105,10 +100,11 @@ io.on('connection', async (socket) => {
         return;
     }
 
-    // --- 管理員邏輯 ---
+    // ==========================================
+    // A. 管理員邏輯
+    // ==========================================
     if (isAdmin) {
         socket.on('adminLogin', async ({ password }) => {
-            // ★ 改用 Mongoose 查詢
             const shop = await Shop.findOne({ shopId });
             
             if (!shop) {
@@ -121,7 +117,7 @@ io.on('connection', async (socket) => {
                 socket.join(`admin_${shopId}`);
                 socket.emit('loginSuccess', { shopName: shop.name });
 
-                // ★ 改用 Mongoose 聚合查詢使用者列表 (去除重複)
+                // 取得使用者列表
                 const msgs = await Message.find({ shopId });
                 const users = {};
                 msgs.forEach(m => {
@@ -138,7 +134,6 @@ io.on('connection', async (socket) => {
         socket.on('adminJoinUser', async ({ userId }) => {
             const roomName = `${shopId}_${userId}`;
             socket.join(roomName);
-            // ★ 改用 Mongoose 查詢歷史訊息
             const history = await Message.find({ shopId, userId }).sort({ timestamp: 1 });
             socket.emit('history', history);
         });
@@ -152,17 +147,28 @@ io.on('connection', async (socket) => {
                 sender: 'admin',
                 timestamp: Date.now()
             };
-            // ★ 改用 Mongoose 存檔
             await new Message(msgData).save();
             
             io.to(`${shopId}_${data.targetUserId}`).emit('newMessage', msgData);
             socket.emit('newMessage', msgData); 
         });
-        return;
+
+        // ★★★ 新增：管理員打字狀態 ★★★
+        socket.on('adminTyping', (data) => {
+            // data needs { targetUserId, isTyping }
+            const roomName = `${shopId}_${data.targetUserId}`;
+            socket.to(roomName).emit('displayTyping', {
+                userId: 'admin',
+                isTyping: data.isTyping
+            });
+        });
+
+        return; // 管理員邏輯結束
     }
 
-    // --- 客戶連線邏輯 ---
-    // ★ 改用 Mongoose 查詢商店設定
+    // ==========================================
+    // B. 一般客戶連線邏輯
+    // ==========================================
     const shopConfig = await Shop.findOne({ shopId });
     if (!shopConfig) {
         console.log(`[拒絕] 無效的 Shop ID`);
@@ -185,10 +191,11 @@ io.on('connection', async (socket) => {
     const roomName = `${shopId}_${userId}`;
     socket.join(roomName);
 
-    // ★ 改用 Mongoose 查詢歷史
+    // 傳送歷史訊息
     const history = await Message.find({ shopId, userId }).sort({ timestamp: 1 });
     socket.emit('history', history);
 
+    // 接收訊息
     socket.on('sendMessage', async (data) => {
         const msgData = {
             shopId,
@@ -198,15 +205,25 @@ io.on('connection', async (socket) => {
             sender: 'user',
             timestamp: Date.now()
         };
-        // ★ 改用 Mongoose 存檔
         await new Message(msgData).save();
 
+        // 廣播給房間內 (自己 + 管理員)
         io.to(roomName).emit('newMessage', msgData);
+        // 通知所有管理員更新列表
         io.to(`admin_${shopId}`).emit('updateUserList', msgData);
+    });
+
+    // ★★★ 新增：客戶打字狀態監聽 ★★★
+    socket.on('typing', (data) => {
+        // data = { isTyping: true/false }
+        // 廣播給房間內的其他人 (主要是管理員)
+        socket.to(roomName).emit('displayTyping', {
+            userId: userId,
+            isTyping: data.isTyping
+        });
     });
 });
 
-// ★ Render 會自動分配 PORT，若沒有則用 8188
 const PORT = process.env.PORT || 8188;
 server.listen(PORT, () => {
     console.log(`伺服器運行中 Port: ${PORT}`);
