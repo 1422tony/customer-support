@@ -5,6 +5,10 @@ const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
+// ★ 新增圖片上傳套件
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const app = express();
 
@@ -33,15 +37,34 @@ const MessageSchema = new mongoose.Schema({
     shopId: String,
     userId: String,
     userName: String,
-    text: String,
-    sender: String, // 'user' or 'admin'
-    timestamp: { type: Number, default: Date.now } // ★ 這裡已經有時間戳記了
+    text: String,     // 如果是圖片，這裡會存 "https://res.cloudinary.....jpg"
+    msgType: { type: String, default: 'text' }, // ★ 新增：分辨是 'text' 還是 'image'
+    sender: String,
+    timestamp: { type: Number, default: Date.now }
 });
 
 const Shop = mongoose.model('Shop', ShopSchema);
 const Message = mongoose.model('Message', MessageSchema);
 
-// --- 3. 伺服器基礎設定 ---
+// --- ★★★ 3. 圖片上傳設定 (Cloudinary) ★★★ ---
+// 請去 Cloudinary Dashboard 複製您的資料填入下方
+cloudinary.config({
+    cloud_name: 'djvv2fltj', 
+    api_key: '551167384221725', 
+    api_secret: 'Z6VHR446XPDOkxF-Y_5KwvZnMEI'
+});
+
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'chat-app', // 圖片會存在這個資料夾
+        allowed_formats: ['jpg', 'png', 'jpeg', 'gif'],
+    },
+});
+const upload = multer({ storage: storage });
+
+
+// --- 4. 伺服器基礎設定 ---
 app.use(cors({ origin: true, credentials: true }));
 app.use((req, res, next) => {
     res.setHeader('ngrok-skip-browser-warning', 'true');
@@ -49,6 +72,16 @@ app.use((req, res, next) => {
 });
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
+
+// ★★★ 新增：圖片上傳 API ★★★
+// 前端發送 POST /upload，這裡回傳圖片網址
+app.post('/upload', upload.single('image'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+    }
+    // 回傳 Cloudinary 的圖片網址
+    res.json({ url: req.file.path });
+});
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -86,12 +119,12 @@ async function initDefaultShop() {
         console.log(`[系統] 已建立預設商店: ${defaultId}`);
     }
 
-    // 2. ★ 新增：第二個測試用商店 (shop_test)
+    // 2. 第二個測試用商店 (shop_test)
     const testId = 'test';
     if (!(await Shop.findOne({ shopId: testId }))) {
         await new Shop({
             shopId: testId,
-            password: '1234', // 測試用的簡單密碼
+            password: '1234', 
             name: '開發測試專用店',
             publicToken: '9999',
             verificationType: 'token'
@@ -157,17 +190,17 @@ io.on('connection', async (socket) => {
                 userId: data.targetUserId,
                 userName: 'Admin',
                 text: data.text,
+                msgType: data.msgType || 'text', // ★ 記得要存訊息類型
                 sender: 'admin',
                 timestamp: Date.now()
             };
             await new Message(msgData).save();
             
+            // 廣播給 User 和 Admin 自己 (不需額外 socket.emit)
             io.to(`${shopId}_${data.targetUserId}`).emit('newMessage', msgData);
         });
 
-        // ★★★ 新增：管理員打字狀態 ★★★
         socket.on('adminTyping', (data) => {
-            // data needs { targetUserId, isTyping }
             const roomName = `${shopId}_${data.targetUserId}`;
             socket.to(roomName).emit('displayTyping', {
                 userId: 'admin',
@@ -214,6 +247,7 @@ io.on('connection', async (socket) => {
             userId,
             userName,
             text: data.text,
+            msgType: data.msgType || 'text', // ★ 記得要存訊息類型
             sender: 'user',
             timestamp: Date.now()
         };
@@ -225,10 +259,7 @@ io.on('connection', async (socket) => {
         io.to(`admin_${shopId}`).emit('updateUserList', msgData);
     });
 
-    // ★★★ 新增：客戶打字狀態監聽 ★★★
     socket.on('typing', (data) => {
-        // data = { isTyping: true/false }
-        // 廣播給房間內的其他人 (主要是管理員)
         socket.to(roomName).emit('displayTyping', {
             userId: userId,
             isTyping: data.isTyping
