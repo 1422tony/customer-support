@@ -25,44 +25,33 @@
 
         #user-list { overflow-y: auto; flex: 1; }
         
-        /* 使用者列表項目樣式 */
-        .user-row { 
-            padding: 15px; 
-            border-bottom: 1px solid #f0f0f0; 
-            cursor: pointer; 
-            transition: 0.2s; 
-            position: relative;
-            font-size: 14px; 
-            line-height: 1.4; 
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .user-row { padding: 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: 0.2s; position: relative; font-size: 14px; line-height: 1.4; display: flex; justify-content: space-between; align-items: center; }
         .user-row:hover { background: #f9f9f9; }
         .user-row.active { background: #e3f2fd; border-left: 4px solid #0084ff; }
 
-        /* 未讀訊息紅點樣式 */
-        .unread-badge {
-            background-color: #ff3b30;
-            color: white;
-            border-radius: 12px;
-            padding: 2px 8px;
-            font-size: 12px;
-            font-weight: bold;
-            display: none;
-            box-shadow: 0 2px 4px rgba(255, 59, 48, 0.3);
-        }
+        .unread-badge { background-color: #ff3b30; color: white; border-radius: 12px; padding: 2px 8px; font-size: 12px; font-weight: bold; display: none; box-shadow: 0 2px 4px rgba(255, 59, 48, 0.3); }
 
         /* 右側聊天區 */
         #chat-main { flex: 1; display: flex; flex-direction: column; background: white; }
         #chat-header { padding: 15px; border-bottom: 1px solid #eee; font-weight: bold; color: #555; background: #fafafa;}
         #messages { flex: 1; padding: 20px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; gap: 10px; }
         
-        /* 對話氣泡 */
-        .bubble { padding: 10px 15px; border-radius: 12px; max-width: 70%; font-size: 14px; line-height: 1.5; word-break: break-all; }
-        .bubble.admin { align-self: flex-end; background: #0084ff; color: white; border-bottom-right-radius: 2px; }
-        .bubble.user { align-self: flex-start; background: #f1f1f1; color: #333; border-bottom-left-radius: 2px; }
+        /* 訊息樣式 */
+        .cb-msg-row { display: flex; flex-direction: column; max-width: 70%; }
+        .cb-msg-row.user { align-self: flex-start; align-items: flex-start; }
+        .cb-msg-row.admin { align-self: flex-end; align-items: flex-end; } /* 後台：自己的訊息在右邊 */
+
+        .bubble { padding: 10px 15px; border-radius: 12px; font-size: 14px; line-height: 1.5; word-break: break-all; }
+        .bubble.admin { background: #0084ff; color: white; border-bottom-right-radius: 2px; }
+        .bubble.user { background: #f1f1f1; color: #333; border-bottom-left-radius: 2px; }
         
+        .cb-time { font-size: 10px; color: #999; margin-top: 2px; margin-left: 4px; margin-right: 4px; }
+
+        /* 輸入中提示 */
+        #typing-status { height: 20px; padding: 0 20px; font-size: 12px; color: #888; font-style: italic; display: flex; align-items: center; }
+        .typing-dots::after { content: '...'; animation: typing 1.5s infinite; }
+        @keyframes typing { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
+
         /* 輸入區 */
         #reply-box { padding: 20px; border-top: 1px solid #ddd; background: #fafafa; }
         #reply-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; outline: none; }
@@ -92,6 +81,7 @@
         <div id="chat-main">
             <div id="chat-header">請選擇一位使用者</div>
             <div id="messages"></div>
+            <div id="typing-status"></div>
             <div id="reply-box">
                 <input type="text" id="reply-input" placeholder="選擇使用者後開始對話..." disabled>
             </div>
@@ -100,13 +90,12 @@
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
-        // ★★★ 已修正：自動連線到當前網址 (Render) ★★★
-        // 這樣就不會再連到舊的 Ngrok，也不會有 CORS 錯誤
         const SERVER = '/'; 
         
         let socket;
         let activeUser = null;
         let unreadCounts = {}; 
+        let typingTimeout; // 用於防抖動
 
         window.onload = function() {
             const savedShop = localStorage.getItem('admin_shop');
@@ -127,7 +116,6 @@
 
             socket = io(SERVER, {
                 auth: { shopId: shop, isAdmin: true },
-                // 這裡不需要 ngrok header 了，因為我們在 Render 內網互通
                 transports: ['websocket', 'polling']
             });
 
@@ -157,7 +145,6 @@
                 Object.keys(users).forEach(uid => renderUserInList(uid, users[uid]));
             });
 
-            // 列表更新 (只負責排序與紅點，不負責畫訊息)
             socket.on('updateUserList', (msg) => {
                 const userId = msg.userId;
                 let userRow = document.querySelector(`.user-row[data-id="${userId}"]`);
@@ -179,10 +166,11 @@
                 }
             });
 
-            // 接收新訊息 (只由這裡負責畫出訊息)
             socket.on('newMessage', (msg) => {
                 if (activeUser === msg.userId) {
                     renderMsg(msg);
+                    // 收到新訊息時，立刻清除對方的「輸入中」狀態
+                    updateTypingStatus(false);
                 }
             });
 
@@ -190,7 +178,25 @@
                 const box = document.getElementById('messages');
                 box.innerHTML = ''; 
                 msgs.forEach(msg => renderMsg(msg));
+                updateTypingStatus(false); // 切換房間時清除狀態
             });
+
+            // ★★★ 新增：監聽對方 (客戶) 的打字狀態 ★★★
+            socket.on('displayTyping', (data) => {
+                // 只有當「目前開啟的對話視窗」等於「正在打字的使用者」時才顯示
+                if (activeUser && data.userId === activeUser) {
+                    updateTypingStatus(data.isTyping);
+                }
+            });
+        }
+
+        function updateTypingStatus(isTyping) {
+            const statusDiv = document.getElementById('typing-status');
+            if(isTyping) {
+                statusDiv.innerHTML = `<span>對方正在輸入</span><span class="typing-dots"></span>`;
+            } else {
+                statusDiv.innerHTML = '';
+            }
         }
 
         function logout() {
@@ -203,11 +209,7 @@
             const div = document.createElement('div');
             div.className = 'user-row';
             div.setAttribute('data-id', uid);
-            
-            div.innerHTML = `
-                <span>${name} <span style="font-size:12px;color:#888">(${uid})</span></span>
-                <span class="unread-badge">0</span>
-            `;
+            div.innerHTML = `<span>${name} <span style="font-size:12px;color:#888">(${uid})</span></span><span class="unread-badge">0</span>`;
             
             div.onclick = () => {
                 activeUser = uid;
@@ -222,6 +224,8 @@
                 document.getElementById('reply-input').disabled = false;
                 document.getElementById('reply-input').focus();
                 document.getElementById('messages').innerHTML = '<div style="text-align:center;color:#999;margin-top:20px;">載入歷史訊息中...</div>';
+                
+                updateTypingStatus(false); // 切換人時清除狀態
 
                 socket.emit('adminJoinUser', { userId: uid });
             };
@@ -230,27 +234,50 @@
             list.prepend(div); 
         }
 
-        // 防重複機制
         function renderMsg(msg) {
             const box = document.getElementById('messages');
             
             const lastMsg = box.lastElementChild;
-            if (lastMsg && 
-                lastMsg.innerText === msg.text && 
-                lastMsg.classList.contains(msg.sender)) {
-                return; // 忽略這條重複訊息
+            // 簡單防重複 (只比對文字)
+            if (lastMsg && lastMsg.innerText.includes(msg.text) && lastMsg.classList.contains(msg.sender)) {
+               // return; 
             }
 
-            const div = document.createElement('div');
-            div.className = `bubble ${msg.sender}`;
-            div.innerText = msg.text;
-            box.appendChild(div);
+            // 時間格式化
+            var date = new Date(msg.timestamp);
+            var timeStr = date.getHours().toString().padStart(2, '0') + ":" + date.getMinutes().toString().padStart(2, '0');
+
+            const row = document.createElement('div');
+            row.className = `cb-msg-row ${msg.sender}`;
+            
+            row.innerHTML = `
+                <div class="bubble ${msg.sender}">${msg.text}</div>
+                <div class="cb-time">${timeStr}</div>
+            `;
+            
+            box.appendChild(row);
             box.scrollTop = box.scrollHeight;
         }
 
-        document.getElementById('reply-input').onkeypress = (e) => {
+        // ★★★ 新增：監聽管理員輸入，並發送給客戶 ★★★
+        const input = document.getElementById('reply-input');
+        
+        input.addEventListener('input', () => {
+            if(activeUser) {
+                socket.emit('adminTyping', { targetUserId: activeUser, isTyping: true });
+                
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    socket.emit('adminTyping', { targetUserId: activeUser, isTyping: false });
+                }, 2000);
+            }
+        });
+
+        input.onkeypress = (e) => {
             if (e.key === 'Enter' && activeUser && e.target.value.trim() !== '') {
                 socket.emit('adminSendMessage', { targetUserId: activeUser, text: e.target.value });
+                // 送出後馬上停止打字狀態
+                socket.emit('adminTyping', { targetUserId: activeUser, isTyping: false });
                 e.target.value = '';
             }
         };
