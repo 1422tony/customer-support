@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>多店家客服後台</title>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; display: flex; height: 100vh; margin: 0; background: #f4f6f8; }
+        
+        /* 登入遮罩 */
+        #login-modal { position: fixed; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .login-card { background: white; padding: 40px; border-radius: 8px; width: 300px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .login-card input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .login-card button { width: 100%; padding: 12px; background: #0084ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        .login-card button:hover { background: #006ecd; }
+
+        /* 主畫面 */
+        #dashboard { display: none; width: 100%; height: 100%; }
+        
+        /* 左側列表 */
+        #sidebar { width: 300px; background: white; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; }
+        #shop-info-box { padding: 20px; background: #2c3e50; color: white; display: flex; justify-content: space-between; align-items: center; }
+        #shop-name { font-weight: bold; font-size: 16px; }
+        #logout-btn { background: #c0392b; border: none; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        #logout-btn:hover { background: #e74c3c; }
+
+        #user-list { overflow-y: auto; flex: 1; }
+        
+        /* 使用者列表項目樣式 */
+        .user-row { 
+            padding: 15px; 
+            border-bottom: 1px solid #f0f0f0; 
+            cursor: pointer; 
+            transition: 0.2s; 
+            position: relative;
+            font-size: 14px; 
+            line-height: 1.4; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .user-row:hover { background: #f9f9f9; }
+        .user-row.active { background: #e3f2fd; border-left: 4px solid #0084ff; }
+
+        /* 未讀訊息紅點樣式 */
+        .unread-badge {
+            background-color: #ff3b30;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            display: none;
+            box-shadow: 0 2px 4px rgba(255, 59, 48, 0.3);
+        }
+
+        /* 右側聊天區 */
+        #chat-main { flex: 1; display: flex; flex-direction: column; background: white; }
+        #chat-header { padding: 15px; border-bottom: 1px solid #eee; font-weight: bold; color: #555; background: #fafafa;}
+        #messages { flex: 1; padding: 20px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; gap: 10px; }
+        
+        /* 對話氣泡 */
+        .bubble { padding: 10px 15px; border-radius: 12px; max-width: 70%; font-size: 14px; line-height: 1.5; word-break: break-all; }
+        .bubble.admin { align-self: flex-end; background: #0084ff; color: white; border-bottom-right-radius: 2px; }
+        .bubble.user { align-self: flex-start; background: #f1f1f1; color: #333; border-bottom-left-radius: 2px; }
+        
+        /* 輸入區 */
+        #reply-box { padding: 20px; border-top: 1px solid #ddd; background: #fafafa; }
+        #reply-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; outline: none; }
+        #reply-input:focus { border-color: #0084ff; }
+    </style>
+</head>
+<body>
+
+    <div id="login-modal">
+        <div class="login-card">
+            <h2>客服後台登入</h2>
+            <input type="text" id="l_shop" placeholder="商店 ID (例如 shop_cyberbiz)">
+            <input type="password" id="l_pass" placeholder="管理密碼">
+            <button onclick="login()">登入系統</button>
+            <p id="l_err" style="color:red; margin-top:10px; font-size:14px;"></p>
+        </div>
+    </div>
+
+    <div id="dashboard">
+        <div id="sidebar">
+            <div id="shop-info-box">
+                <span id="shop-name">載入中...</span>
+                <button id="logout-btn" onclick="logout()">登出</button>
+            </div>
+            <div id="user-list"></div>
+        </div>
+        <div id="chat-main">
+            <div id="chat-header">請選擇一位使用者</div>
+            <div id="messages"></div>
+            <div id="reply-box">
+                <input type="text" id="reply-input" placeholder="選擇使用者後開始對話..." disabled>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const SERVER = 'https://leonore-untranspired-smudgily.ngrok-free.dev'; // ★ 請確認網址 ★
+        let socket;
+        let activeUser = null;
+        let unreadCounts = {}; 
+
+        window.onload = function() {
+            const savedShop = localStorage.getItem('admin_shop');
+            const savedPass = localStorage.getItem('admin_pass');
+            if(savedShop && savedPass) {
+                document.getElementById('l_shop').value = savedShop;
+                document.getElementById('l_pass').value = savedPass;
+                login();
+            }
+        };
+
+        function login() {
+            const shop = document.getElementById('l_shop').value.trim();
+            const pass = document.getElementById('l_pass').value.trim();
+            
+            if(!shop || !pass) { alert("請輸入帳號密碼"); return; }
+            if(socket) socket.disconnect();
+
+            socket = io(SERVER, {
+                auth: { shopId: shop, isAdmin: true },
+                extraHeaders: { "ngrok-skip-browser-warning": "true" }
+            });
+
+            socket.on('connect', () => {
+                console.log("已連線至伺服器");
+                socket.emit('adminLogin', { password: pass });
+            });
+
+            socket.on('loginSuccess', (data) => {
+                localStorage.setItem('admin_shop', shop);
+                localStorage.setItem('admin_pass', pass);
+                document.getElementById('login-modal').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'flex';
+                document.getElementById('shop-name').innerText = data.shopName;
+            });
+
+            socket.on('loginError', (err) => {
+                document.getElementById('l_err').innerText = err;
+                localStorage.removeItem('admin_pass');
+                socket.disconnect();
+            });
+
+            socket.on('initUserList', (users) => {
+                const list = document.getElementById('user-list');
+                list.innerHTML = '';
+                unreadCounts = {}; 
+                Object.keys(users).forEach(uid => renderUserInList(uid, users[uid]));
+            });
+
+            // 列表更新 (只負責排序與紅點，不負責畫訊息)
+            socket.on('updateUserList', (msg) => {
+                const userId = msg.userId;
+                let userRow = document.querySelector(`.user-row[data-id="${userId}"]`);
+                
+                if (!userRow) {
+                    renderUserInList(userId, msg.userName);
+                    userRow = document.querySelector(`.user-row[data-id="${userId}"]`);
+                } else {
+                    const list = document.getElementById('user-list');
+                    list.prepend(userRow);
+                }
+
+                if (activeUser !== userId && msg.sender !== 'admin') {
+                    if (!unreadCounts[userId]) unreadCounts[userId] = 0;
+                    unreadCounts[userId]++;
+                    const badge = userRow.querySelector('.unread-badge');
+                    badge.innerText = unreadCounts[userId] > 99 ? '99+' : unreadCounts[userId];
+                    badge.style.display = 'inline-block';
+                }
+            });
+
+            // 接收新訊息 (只由這裡負責畫出訊息)
+            socket.on('newMessage', (msg) => {
+                if (activeUser === msg.userId) {
+                    renderMsg(msg);
+                }
+            });
+
+            socket.on('history', (msgs) => {
+                const box = document.getElementById('messages');
+                box.innerHTML = ''; 
+                msgs.forEach(msg => renderMsg(msg));
+            });
+        }
+
+        function logout() {
+            localStorage.removeItem('admin_shop');
+            localStorage.removeItem('admin_pass');
+            location.reload();
+        }
+
+        function renderUserInList(uid, name) {
+            const div = document.createElement('div');
+            div.className = 'user-row';
+            div.setAttribute('data-id', uid);
+            
+            div.innerHTML = `
+                <span>${name} <span style="font-size:12px;color:#888">(${uid})</span></span>
+                <span class="unread-badge">0</span>
+            `;
+            
+            div.onclick = () => {
+                activeUser = uid;
+                document.querySelectorAll('.user-row').forEach(e => e.classList.remove('active'));
+                div.classList.add('active');
+                
+                unreadCounts[uid] = 0; 
+                const badge = div.querySelector('.unread-badge');
+                badge.style.display = 'none';
+                
+                document.getElementById('chat-header').innerText = `正在與 ${name} 對話`;
+                document.getElementById('reply-input').disabled = false;
+                document.getElementById('reply-input').focus();
+                document.getElementById('messages').innerHTML = '<div style="text-align:center;color:#999;margin-top:20px;">載入歷史訊息中...</div>';
+
+                socket.emit('adminJoinUser', { userId: uid });
+            };
+            
+            const list = document.getElementById('user-list');
+            list.prepend(div); 
+        }
+
+        // ★ 核心修復：加入防重複機制 ★
+        function renderMsg(msg) {
+            const box = document.getElementById('messages');
+            
+            // 檢查最後一條訊息，如果內容和發送者都一樣，就當作重複，不顯示
+            const lastMsg = box.lastElementChild;
+            if (lastMsg && 
+                lastMsg.innerText === msg.text && 
+                lastMsg.classList.contains(msg.sender)) {
+                return; // 忽略這條重複訊息
+            }
+
+            const div = document.createElement('div');
+            div.className = `bubble ${msg.sender}`;
+            div.innerText = msg.text;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        document.getElementById('reply-input').onkeypress = (e) => {
+            if (e.key === 'Enter' && activeUser && e.target.value.trim() !== '') {
+                socket.emit('adminSendMessage', { targetUserId: activeUser, text: e.target.value });
+                e.target.value = '';
+            }
+        };
+    </script>
+</body>
+</html>

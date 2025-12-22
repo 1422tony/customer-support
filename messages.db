@@ -1,0 +1,10 @@
+{"userId":"user_78wle56n0","text":"456","sender":"admin","timestamp":1766132077062,"_id":"4XCmCUWdtMgFnkPP"}
+{"userId":"user_sspwxfw1v","text":"cover","sender":"user","timestamp":1766336532014,"_id":"5JvVebNBbWNZBbrE"}
+{"userId":"user_sspwxfw1v","text":"456","sender":"user","timestamp":1766336500358,"_id":"Bg6cO1UIgwRAZUw9"}
+{"userId":"user_sspwxfw1v","text":"789","sender":"user","timestamp":1766336501766,"_id":"KgXMQHAzWpAIvh0r"}
+{"userId":"user_sspwxfw1v","text":"123","sender":"user","timestamp":1766134669218,"_id":"cZuNWA6OoIrM0HhC"}
+{"userId":"user_78wle56n0","text":"123","sender":"user","timestamp":1766132070260,"_id":"dz5kAD74yzEABcbU"}
+{"userId":"user_78wle56n0","text":"456","sender":"user","timestamp":1766132086857,"_id":"qpw9XCpJI4FRKIyN"}
+{"userId":"user_sspwxfw1v","text":"testtest","sender":"admin","timestamp":1766336524398,"_id":"t3vLeAb4LhdIijCS"}
+{"$$indexCreated":{"fieldName":"shopId","unique":false,"sparse":false}}
+{"$$indexCreated":{"fieldName":"userId","unique":false,"sparse":false}}
