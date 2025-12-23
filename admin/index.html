@@ -5,19 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>多店家客服後台</title>
     <style>
-        /* 全域設定：使用 dvh (Dynamic Viewport Height) 解決手機網址列遮擋問題 */
         body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; display: flex; height: 100vh; height: 100dvh; margin: 0; background: #f4f6f8; overflow: hidden; }
         
-        /* --- 登入遮罩 (RWD) --- */
         #login-modal { position: fixed; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
         .login-card { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .login-card input { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; /* 防止 iOS Zoom */ }
+        .login-card input { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         .login-card button { width: 100%; padding: 14px; background: #0084ff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; }
         
-        /* --- 主畫面佈局 --- */
         #dashboard { display: none; width: 100%; height: 100%; overflow: hidden; position: relative; }
         
-        /* 左側列表 */
         #sidebar { width: 300px; background: white; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; height: 100%; z-index: 2; }
         #shop-info-box { padding: 15px; background: #2c3e50; color: white; display: flex; justify-content: space-between; align-items: center; height: 50px; flex-shrink: 0; }
         #logout-btn { background: #c0392b; border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; }
@@ -29,7 +25,6 @@
         .user-row.active { background: #e3f2fd; border-left: 4px solid #0084ff; }
         .unread-badge { background-color: #ff3b30; color: white; border-radius: 12px; padding: 3px 8px; font-size: 12px; font-weight: bold; display: none; }
 
-        /* 右側聊天區 */
         #chat-main { flex: 1; display: flex; flex-direction: column; background: white; height: 100%; position: relative; z-index: 1; }
         
         #chat-header { 
@@ -39,12 +34,10 @@
             flex-shrink: 0;
         }
         
-        /* 上一頁按鈕 (預設隱藏，手機版才顯示) */
         #back-btn { display: none; background: none; border: none; font-size: 24px; cursor: pointer; color: #0084ff; padding-right: 10px; }
 
         #messages { flex: 1; padding: 15px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
         
-        /* 訊息樣式 */
         .cb-msg-row { display: flex; flex-direction: column; max-width: 85%; }
         .cb-msg-row.user { align-self: flex-start; align-items: flex-start; }
         .cb-msg-row.admin { align-self: flex-end; align-items: flex-end; } 
@@ -58,11 +51,11 @@
 
         .cb-time { font-size: 11px; color: #aaa; margin: 4px 2px 0; }
 
-        /* 輸入區與工具列 */
         #typing-status { height: 24px; padding: 0 15px; font-size: 12px; color: #888; display: flex; align-items: center; background: #fff; }
         
+        /* 輸入區 RWD 設定 */
         #reply-box { 
-            padding: 10px 15px 15px 15px; /* 下方多留一點空間給手機 Home Bar */
+            padding: 10px 15px 15px 15px; 
             border-top: 1px solid #eee; background: #fff; 
             display: flex; align-items: center; gap: 10px; 
             flex-shrink: 0;
@@ -70,38 +63,38 @@
         
         #reply-input { 
             flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 24px; 
-            outline: none; font-size: 16px; /* 16px 是手機輸入框不放大的關鍵 */
+            outline: none; font-size: 16px; 
             background: #f9f9f9; -webkit-appearance: none;
         }
         #reply-input:focus { border-color: #0084ff; background: #fff; }
 
+        /* 相機按鈕 */
         #upload-btn { cursor: pointer; font-size: 26px; color: #0084ff; padding: 5px; display: flex; align-items: center; }
         #file-input { display: none; }
 
-        /* --- ★★★ 關鍵 2: 手機版 Media Query ★★★ --- */
+        /* ★ 新增：傳送按鈕樣式 */
+        #send-btn { 
+            width: 40px; height: 40px; 
+            cursor: pointer; 
+            margin-left: 2px;
+            border-radius: 50%; /* 圓形點擊區 */
+            transition: transform 0.1s;
+        }
+        #send-btn:active { transform: scale(0.9); background: #f0f0f0; }
+
         @media (max-width: 768px) {
-            #dashboard { display: block; } /* 取消 Flex，改用絕對定位切換 */
-            
-            /* 手機版初始狀態：只顯示列表，隱藏聊天室 */
+            #dashboard { display: block; }
             #sidebar { width: 100%; position: absolute; top: 0; left: 0; display: flex; }
             #chat-main { 
                 width: 100%; position: absolute; top: 0; left: 0; 
-                transform: translateX(100%); /* 先把聊天室移到螢幕右邊外面 */
+                transform: translateX(100%); 
                 transition: transform 0.3s ease-in-out;
                 z-index: 10;
             }
-
-            /* 當有 .show-chat 類別時，顯示聊天室 */
             #dashboard.show-chat #chat-main { transform: translateX(0); }
-            #dashboard.show-chat #sidebar { display: none; } /* 效能優化：看不到就隱藏 */
-
-            /* 顯示上一頁按鈕 */
+            #dashboard.show-chat #sidebar { display: none; } 
             #back-btn { display: block; }
-            
-            /* 調整手機版 Header */
             #chat-header { padding-left: 5px; }
-            
-            /* 圖片在手機上可以大一點 */
             .cb-msg-img { max-width: 70vw; }
         }
     </style>
@@ -139,7 +132,10 @@
             <div id="reply-box">
                 <label for="file-input" id="upload-btn">📷</label>
                 <input type="file" id="file-input" accept="image/*">
+                
                 <input type="text" id="reply-input" placeholder="輸入訊息..." disabled>
+                
+                <img src="/icon/send.png" id="send-btn" alt="Send">
             </div>
         </div>
     </div>
@@ -162,10 +158,9 @@
             }
         };
 
-        // --- 手機版切換邏輯 ---
         function backToList() {
             document.getElementById('dashboard').classList.remove('show-chat');
-            document.activeElement.blur(); // 收起鍵盤
+            document.activeElement.blur(); 
             activeUser = null;
         }
 
@@ -173,7 +168,6 @@
             document.getElementById('dashboard').classList.add('show-chat');
         }
 
-        // --- 登入邏輯 ---
         function login() {
             const shop = document.getElementById('l_shop').value.trim();
             const pass = document.getElementById('l_pass').value.trim();
@@ -193,11 +187,8 @@
                 localStorage.setItem('admin_shop', shop);
                 localStorage.setItem('admin_pass', pass);
                 document.getElementById('login-modal').style.display = 'none';
-                
-                // 修正：手機版因為使用 absolute positioning，需要特定 display
                 const dash = document.getElementById('dashboard');
                 dash.style.display = (window.innerWidth <= 768) ? 'block' : 'flex';
-                
                 document.getElementById('shop-name').innerText = data.shopName;
             });
 
@@ -295,7 +286,6 @@
                 document.getElementById('chat-title').innerText = name;
                 document.getElementById('reply-input').disabled = false;
                 
-                // 進入聊天畫面 (手機版邏輯)
                 showChat();
                 document.getElementById('messages').innerHTML = '<div style="text-align:center;color:#999;margin-top:20px;">載入中...</div>';
                 
@@ -336,6 +326,17 @@
         }
 
         const input = document.getElementById('reply-input');
+        
+        // ★ 核心功能：發送文字邏輯 (Enter 與 按鈕共用)
+        function sendTextMsg() {
+            if (activeUser && input.value.trim() !== '') {
+                socket.emit('adminSendMessage', { targetUserId: activeUser, text: input.value, msgType: 'text' });
+                socket.emit('adminTyping', { targetUserId: activeUser, isTyping: false });
+                input.value = '';
+            }
+        }
+
+        // 監聽輸入與打字狀態
         input.addEventListener('input', () => {
             if(activeUser) {
                 socket.emit('adminTyping', { targetUserId: activeUser, isTyping: true });
@@ -346,13 +347,13 @@
             }
         });
 
+        // 綁定鍵盤 Enter
         input.onkeypress = (e) => {
-            if (e.key === 'Enter' && activeUser && e.target.value.trim() !== '') {
-                socket.emit('adminSendMessage', { targetUserId: activeUser, text: e.target.value, msgType: 'text' });
-                socket.emit('adminTyping', { targetUserId: activeUser, isTyping: false });
-                e.target.value = '';
-            }
+            if (e.key === 'Enter') sendTextMsg();
         };
+
+        // 綁定傳送按鈕點擊
+        document.getElementById('send-btn').onclick = sendTextMsg;
 
         // 圖片上傳
         const fileInput = document.getElementById('file-input');
