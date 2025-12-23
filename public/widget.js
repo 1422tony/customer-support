@@ -1,12 +1,15 @@
 (function() {
-    console.log(">>> Widget.js (v11.0 傳送按鈕 + 燈箱版) 啟動...");
+    console.log(">>> Widget.js (v11.1 層級修復版) 啟動...");
 
     function renderUI() {
         if (document.getElementById('cb-container')) return;
 
         var style = document.createElement('style');
         style.innerHTML = `
-            #cb-container { position: fixed; right: 20px; bottom: 48px; z-index: 2147483647; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; pointer-events: auto; font-family: sans-serif; }
+            /* ★ 修改 1: 將基礎 Z-Index 稍微調降，預留空間給上層元素 */
+            /* 2147483647 是瀏覽器最大值，我們減去 50，設為 ...600 */
+            #cb-container { position: fixed; right: 20px; bottom: 48px; z-index: 2147483600; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; pointer-events: auto; font-family: sans-serif; }
+            
             #cb-btn { width: 60px; height: 60px; background: #0084ff; border-radius: 50%; color: white; border: 2px solid white; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); font-size: 30px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
             #cb-btn:active { transform: scale(0.95); }
             
@@ -16,14 +19,19 @@
             @media (max-width: 768px) { 
                 #cb-container { bottom: 60px !important; right: 20px !important; } 
                 #cb-btn { width: 55px; height: 55px; } 
-                #cb-box { position: fixed; bottom: 0; right: 0; width: 100%; height: 100%; z-index: 2147483649; border-radius: 0; } 
+                
+                /* ★ 修改 2: 手機版聊天室設為 ...610 (比 Container 高) */
+                #cb-box { 
+                    position: fixed; bottom: 0; right: 0; width: 100%; height: 100%; 
+                    z-index: 2147483610; 
+                    border-radius: 0; 
+                } 
                 #cb-close-mobile { display: block !important; cursor: pointer; font-size: 24px; padding: 0 10px;} 
             }
 
             #cb-head { background: #0084ff; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;}
             #cb-list { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #f9f9f9; }
             
-            /* 訊息氣泡 */
             .cb-msg-row { display: flex; flex-direction: column; max-width: 80%; margin-bottom: 8px; }
             .cb-msg-row.user { align-self: flex-end; align-items: flex-end; }
             .cb-msg-row.admin { align-self: flex-start; align-items: flex-start; }
@@ -32,7 +40,6 @@
             .cb-msg.user { background: #0084ff; color: white; border-bottom-right-radius: 4px; }
             .cb-msg.admin { background: #e4e6eb; color: #050505; border-bottom-left-radius: 4px; }
             
-            /* 圖片樣式 */
             .cb-msg.image { background: transparent !important; padding: 0; }
             .cb-msg-img { max-width: 150px; border-radius: 8px; cursor: zoom-in; border: 2px solid #ddd; }
 
@@ -42,15 +49,12 @@
             .typing-dots::after { content: '...'; animation: typing 1.5s infinite; }
             @keyframes typing { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
 
-            /* Footer 設定 */
             #cb-footer { padding: 10px; border-top: 1px solid #ddd; background: #fff; display: flex; align-items: center; gap: 8px; }
             #cb-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; background: #f0f2f5; font-size: 16px; }
             
-            /* 按鈕樣式 */
             #cb-upload-btn { cursor: pointer; font-size: 24px; color: #888; padding: 0 5px; line-height: 1; }
             #cb-file-input { display: none; }
             
-            /* ★ 新增：傳送按鈕 (SVG) */
             #cb-send-btn { 
                 width: 36px; height: 36px; 
                 display: flex; align-items: center; justify-content: center;
@@ -58,11 +62,11 @@
                 transition: background 0.1s;
             }
             #cb-send-btn:active { background: #f0f0f0; }
-            #cb-send-btn svg { width: 24px; height: 24px; fill: currentColor; margin-left: -2px; margin-top: 2px; }
+            #cb-send-btn svg { width: 24px; height: 24px; fill: currentColor; transform: rotate(-45deg); margin-left: -2px; margin-top: 2px; }
 
-            /* ★ 新增：燈箱樣式 */
+            /* ★ 修改 3: 燈箱設為 ...620 (最高層級)，確保在聊天室之上 */
             #cb-image-modal {
-                display: none; position: fixed; z-index: 2147483650;
+                display: none; position: fixed; z-index: 2147483620;
                 left: 0; top: 0; width: 100%; height: 100%;
                 background-color: rgba(0,0,0,0.9);
                 justify-content: center; align-items: center;
@@ -78,7 +82,7 @@
             #cb-close-modal {
                 position: absolute; top: 20px; right: 20px;
                 color: #fff; font-size: 30px; font-weight: bold;
-                cursor: pointer; z-index: 2147483651; background: rgba(0,0,0,0.5);
+                cursor: pointer; z-index: 2147483621; background: rgba(0,0,0,0.5);
                 width: 40px; height: 40px; border-radius: 50%;
                 display: flex; align-items: center; justify-content: center;
             }
@@ -89,12 +93,10 @@
 
         var container = document.createElement('div');
         container.id = 'cb-container';
+        
+        // ★ 修改 4: 調整 DOM 順序，將燈箱 (Modal) 放到 HTML 的最後面
+        // 這樣就算 Z-Index 失效，DOM 順序也能保證它在最上層
         container.innerHTML = `
-            <div id="cb-image-modal">
-                <span id="cb-close-modal">&times;</span>
-                <img id="cb-modal-img">
-            </div>
-
             <div id="cb-box">
                 <div id="cb-head"><span>客服中心</span><span id="cb-close-mobile" style="display:none;">&times;</span></div>
                 <div id="cb-list"><div style="text-align:center;color:#999;padding:20px;">連線中...</div></div>
@@ -111,6 +113,11 @@
                 </div>
             </div>
             <button id="cb-btn">💬</button>
+
+            <div id="cb-image-modal">
+                <span id="cb-close-modal">&times;</span>
+                <img id="cb-modal-img">
+            </div>
         `;
         document.documentElement.appendChild(container);
 
@@ -118,7 +125,6 @@
         var box = document.getElementById('cb-box');
         var closeMobile = document.getElementById('cb-close-mobile');
         
-        // 燈箱控制
         var modal = document.getElementById('cb-image-modal');
         var closeBtn = document.getElementById('cb-close-modal');
         
@@ -194,7 +200,6 @@
             
             let contentHtml = '';
             if (msg.msgType === 'image') {
-                // ★ 改成點擊觸發 cbShowImage()
                 contentHtml = `<div class="cb-msg image ${msg.sender}">
                     <img src="${msg.text}" class="cb-msg-img" onclick="window.cbShowImage(this.src)">
                 </div>`;
@@ -229,12 +234,11 @@
         var bindInterval = setInterval(function(){
             var input = document.getElementById('cb-input');
             var fileInput = document.getElementById('cb-file-input');
-            var sendBtn = document.getElementById('cb-send-btn'); // ★ 抓取傳送按鈕
+            var sendBtn = document.getElementById('cb-send-btn'); 
 
             if(input && fileInput && sendBtn) {
                 clearInterval(bindInterval);
 
-                // ★ 統一發送函式
                 function sendText() {
                     if (input.value.trim()) {
                         socket.emit('sendMessage', { text: input.value, msgType: 'text' });
@@ -256,7 +260,6 @@
                     if (e.key === 'Enter') sendText();
                 };
 
-                // ★ 綁定點擊事件
                 sendBtn.onclick = sendText;
 
                 fileInput.onchange = async function() {
