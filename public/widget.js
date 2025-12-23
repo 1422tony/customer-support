@@ -1,14 +1,12 @@
 (function() {
-    console.log(">>> Widget.js (v11.2 自動捲動修復版) 啟動...");
+    console.log(">>> Widget.js (v12.0 足跡追蹤版) 啟動...");
 
     function renderUI() {
         if (document.getElementById('cb-container')) return;
 
         var style = document.createElement('style');
         style.innerHTML = `
-            /* 基礎 Z-Index 設定 */
             #cb-container { position: fixed; right: 20px; bottom: 48px; z-index: 2147483600; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; pointer-events: auto; font-family: sans-serif; }
-            
             #cb-btn { width: 60px; height: 60px; background: #0084ff; border-radius: 50%; color: white; border: 2px solid white; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); font-size: 30px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
             #cb-btn:active { transform: scale(0.95); }
             
@@ -18,11 +16,7 @@
             @media (max-width: 768px) { 
                 #cb-container { bottom: 60px !important; right: 20px !important; } 
                 #cb-btn { width: 55px; height: 55px; } 
-                #cb-box { 
-                    position: fixed; bottom: 0; right: 0; width: 100%; height: 100%; 
-                    z-index: 2147483610; 
-                    border-radius: 0; 
-                } 
+                #cb-box { position: fixed; bottom: 0; right: 0; width: 100%; height: 100%; z-index: 2147483610; border-radius: 0; } 
                 #cb-close-mobile { display: block !important; cursor: pointer; font-size: 24px; padding: 0 10px;} 
             }
 
@@ -36,10 +30,8 @@
             .cb-msg { padding: 10px 14px; border-radius: 18px; font-size: 15px; word-break: break-word; position: relative; }
             .cb-msg.user { background: #0084ff; color: white; border-bottom-right-radius: 4px; }
             .cb-msg.admin { background: #e4e6eb; color: #050505; border-bottom-left-radius: 4px; }
-            
             .cb-msg.image { background: transparent !important; padding: 0; }
             .cb-msg-img { max-width: 150px; border-radius: 8px; cursor: zoom-in; border: 2px solid #ddd; }
-
             .cb-time { font-size: 10px; color: #999; margin-top: 2px; margin-left: 4px; margin-right: 4px; }
 
             .typing-indicator { font-size: 12px; color: #888; padding: 5px 10px; display: none; font-style: italic; }
@@ -48,41 +40,15 @@
 
             #cb-footer { padding: 10px; border-top: 1px solid #ddd; background: #fff; display: flex; align-items: center; gap: 8px; }
             #cb-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; background: #f0f2f5; font-size: 16px; }
-            
             #cb-upload-btn { cursor: pointer; font-size: 24px; color: #888; padding: 0 5px; line-height: 1; }
             #cb-file-input { display: none; }
-            
-            #cb-send-btn { 
-                width: 36px; height: 36px; 
-                display: flex; align-items: center; justify-content: center;
-                cursor: pointer; border-radius: 50%; color: #0084ff;
-                transition: background 0.1s;
-            }
+            #cb-send-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%; color: #0084ff; transition: background 0.1s; }
             #cb-send-btn:active { background: #f0f0f0; }
             #cb-send-btn svg { width: 24px; height: 24px; fill: currentColor; transform: rotate(-45deg); margin-left: -2px; margin-top: 2px; }
 
-            /* 燈箱 Z-Index 最高 */
-            #cb-image-modal {
-                display: none; position: fixed; z-index: 2147483620;
-                left: 0; top: 0; width: 100%; height: 100%;
-                background-color: rgba(0,0,0,0.9);
-                justify-content: center; align-items: center;
-                backdrop-filter: blur(5px);
-                animation: cbFadeIn 0.2s;
-            }
-            #cb-modal-img {
-                max-width: 95%; max-height: 95%;
-                border-radius: 4px;
-                object-fit: contain;
-                animation: cbZoomIn 0.2s;
-            }
-            #cb-close-modal {
-                position: absolute; top: 20px; right: 20px;
-                color: #fff; font-size: 30px; font-weight: bold;
-                cursor: pointer; z-index: 2147483621; background: rgba(0,0,0,0.5);
-                width: 40px; height: 40px; border-radius: 50%;
-                display: flex; align-items: center; justify-content: center;
-            }
+            #cb-image-modal { display: none; position: fixed; z-index: 2147483620; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; backdrop-filter: blur(5px); animation: cbFadeIn 0.2s; }
+            #cb-modal-img { max-width: 95%; max-height: 95%; border-radius: 4px; object-fit: contain; animation: cbZoomIn 0.2s; }
+            #cb-close-modal { position: absolute; top: 20px; right: 20px; color: #fff; font-size: 30px; font-weight: bold; cursor: pointer; z-index: 2147483621; background: rgba(0,0,0,0.5); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
             @keyframes cbFadeIn { from {opacity:0;} to {opacity:1;} }
             @keyframes cbZoomIn { from {transform:scale(0.9);} to {transform:scale(1);} }
         `;
@@ -90,7 +56,6 @@
 
         var container = document.createElement('div');
         container.id = 'cb-container';
-        
         container.innerHTML = `
             <div id="cb-box">
                 <div id="cb-head"><span>客服中心</span><span id="cb-close-mobile" style="display:none;">&times;</span></div>
@@ -99,27 +64,18 @@
                 <div id="cb-footer">
                     <label for="cb-file-input" id="cb-upload-btn">📷</label>
                     <input type="file" id="cb-file-input" accept="image/*">
-                    
                     <input id="cb-input" placeholder="輸入訊息...">
-                    
-                    <div id="cb-send-btn">
-                        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                    </div>
+                    <div id="cb-send-btn"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></div>
                 </div>
             </div>
             <button id="cb-btn">💬</button>
-
-            <div id="cb-image-modal">
-                <span id="cb-close-modal">&times;</span>
-                <img id="cb-modal-img">
-            </div>
+            <div id="cb-image-modal"><span id="cb-close-modal">&times;</span><img id="cb-modal-img"></div>
         `;
         document.documentElement.appendChild(container);
 
         var btn = document.getElementById('cb-btn');
         var box = document.getElementById('cb-box');
         var closeMobile = document.getElementById('cb-close-mobile');
-        
         var modal = document.getElementById('cb-image-modal');
         var closeBtn = document.getElementById('cb-close-modal');
         
@@ -132,22 +88,13 @@
             modalImg.src = src;
         };
 
-        // ★★★ 修改：Toggle 函式加入強制捲動邏輯 ★★★
         function toggle() { 
             var isHidden = (box.style.display === 'none' || box.style.display === ''); 
             box.style.display = isHidden ? 'flex' : 'none'; 
-            
-            // 如果是「打開」的動作
             if (isHidden) {
                 var list = document.getElementById('cb-list');
-                if (list) {
-                    // 使用 setTimeout 讓瀏覽器先完成顯示 (display:flex)，再來計算高度
-                    setTimeout(function() {
-                        list.scrollTop = list.scrollHeight;
-                    }, 10); // 10ms 就足夠了
-                }
+                if (list) setTimeout(function() { list.scrollTop = list.scrollHeight; }, 10);
             }
-
             if (window.innerWidth <= 768) document.body.style.overflow = isHidden ? 'hidden' : ''; 
         }
         btn.onclick = toggle; closeMobile.onclick = toggle;
@@ -156,7 +103,6 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderUI);
     else renderUI();
     
-    // --- Config ---
     var config = window.ChatWidgetConfig || {};
     if (!config.shopId) { var s = document.currentScript; if(s) config.shopId = s.getAttribute('data-shop-id'); }
     if (!config.shopId) return;
@@ -166,7 +112,6 @@
     var userId = config.userId;
     var userName = config.userName;
     var signature = config.signature; 
-    
     var autoReplyEnabled = config.autoReplyEnabled; 
     var offlineMsg = config.offlineMsg || "現在是非營業時間，我們會盡快回覆您。";
     var startHour = parseInt(config.startHour || "9");
@@ -193,7 +138,25 @@
             var btn = document.getElementById('cb-btn');
             if(list) list.innerHTML = ''; 
             if(btn) btn.style.borderColor = '#00ff00';
+
+            // ★★★ 新增：傳送當前頁面資訊 (足跡) ★★★
+            reportPage();
         });
+
+        // 偵測頁面資訊並傳送
+        function reportPage() {
+            // 嘗試抓取 Open Graph 標籤 (標準商品頁都有)
+            var ogTitle = document.querySelector('meta[property="og:title"]');
+            var ogImage = document.querySelector('meta[property="og:image"]');
+            
+            var payload = {
+                url: window.location.href,
+                title: ogTitle ? ogTitle.content : document.title,
+                image: ogImage ? ogImage.content : ''
+            };
+            
+            socket.emit('pageChange', payload);
+        }
 
         socket.on('forceGuestMode', function(data) {
             userId = data.userId;
@@ -259,19 +222,12 @@
                         input.value = '';
                     }
                 }
-
                 input.addEventListener('input', function() {
                     socket.emit('typing', { isTyping: true });
                     clearTimeout(typingTimeout);
-                    typingTimeout = setTimeout(function() {
-                        socket.emit('typing', { isTyping: false });
-                    }, 2000);
+                    typingTimeout = setTimeout(function() { socket.emit('typing', { isTyping: false }); }, 2000);
                 });
-
-                input.onkeypress = function(e) {
-                    if (e.key === 'Enter') sendText();
-                };
-
+                input.onkeypress = function(e) { if (e.key === 'Enter') sendText(); };
                 sendBtn.onclick = sendText;
 
                 fileInput.onchange = async function() {
@@ -279,7 +235,6 @@
                     if (!file) return;
                     const formData = new FormData();
                     formData.append('image', file);
-
                     try {
                         input.placeholder = "圖片上傳中...";
                         input.disabled = true;
@@ -289,13 +244,8 @@
                             socket.emit('sendMessage', { text: data.url, msgType: 'image' });
                             checkAutoReply();
                         }
-                    } catch (err) {
-                        alert("上傳失敗");
-                    } finally {
-                        input.placeholder = "輸入訊息...";
-                        input.disabled = false;
-                        fileInput.value = '';
-                    }
+                    } catch (err) { alert("上傳失敗"); } 
+                    finally { input.placeholder = "輸入訊息..."; input.disabled = false; fileInput.value = ''; }
                 };
             }
         }, 500);
@@ -310,7 +260,5 @@
             }
         }
     };
-    
     document.head.appendChild(script);
-
 })();

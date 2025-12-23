@@ -294,6 +294,15 @@ io.on('connection', async (socket) => {
         io.to(roomName).emit('newMessage', msgData);
         io.to(`admin_${shopId}`).emit('updateUserList', msgData);
     });
+    // ★★★ 新增：接收使用者的足跡，並轉發給管理員 ★★★
+    socket.on('pageChange', (data) => {
+        // data = { url, title, image }
+        // 廣播給該商店的管理員
+        io.to(`admin_${shopId}`).emit('userPageUpdate', {
+            userId: userId,
+            ...data
+        });
+    });
 
     socket.on('typing', (data) => {
         socket.to(roomName).emit('displayTyping', {

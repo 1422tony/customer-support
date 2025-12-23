@@ -3,39 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta property="og:title" content="頂級開發者機械鍵盤 (測試商品)">
+    <meta property="og:image" content="https://placehold.co/600x400/0084ff/ffffff?text=Keyboard+Product">
+    
     <title>客服系統測試頁面 (HMAC版)</title>
     <style>
-        body { font-family: sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
-        .container { max-width: 800px; margin: 50px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #333; }
+        body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
+        .container { max-width: 800px; margin: 50px auto; padding: 30px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1 { color: #333; margin-top: 0; }
         p { line-height: 1.6; color: #666; }
-        .product-card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-top: 20px; display: flex; align-items: center; gap: 20px; }
-        .product-img { width: 100px; height: 100px; background: #eee; display: flex; align-items: center; justify-content: center; color: #999; }
-        .btn { padding: 10px 20px; background: #0084ff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        
+        .product-card { border: 1px solid #eee; padding: 20px; border-radius: 12px; margin-top: 20px; display: flex; align-items: center; gap: 20px; background: #fafafa; }
+        .product-img { width: 120px; height: 120px; border-radius: 8px; object-fit: cover; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        .btn { padding: 12px 24px; background: #0084ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; transition: 0.2s; }
+        .btn:hover { background: #006ecd; }
         
         /* 提示區塊 */
-        .notice { background: #fff3cd; color: #856404; padding: 10px; border-radius: 4px; margin-bottom: 20px; font-size: 14px; border: 1px solid #ffeeba; }
+        .notice { background: #fff3cd; color: #856404; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; border: 1px solid #ffeeba; line-height: 1.5; }
+        code { background: #f8f9fa; padding: 2px 5px; border-radius: 3px; color: #e83e8c; font-family: monospace; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>開發測試專用店 (HMAC Enabled)</h1>
+        <h1>🛒 開發測試專用店</h1>
         
         <div class="notice">
             <strong>⚠️ 開發者注意：</strong><br>
-            此頁面使用 JavaScript 模擬後端 HMAC 加密，方便您測試連線。<br>
-            正式環境 (Liquid) 請勿將 Secret Key 寫在前端代碼中！
+            此頁面包含 JavaScript 模擬後端 HMAC 加密，方便您測試連線。<br>
+            請確認下方的 <code>secretKey</code> 與您 <code>server.js</code> 內的設定一致！
         </div>
 
-        <p>當前的商店 ID 為：<code>test</code></p>
-        <p>模擬使用者 ID：<code>user_sim_001</code></p>
+        <p>商店 ID：<code>test</code> | 使用者：<code>user_sim_001</code></p>
         
         <div class="product-card">
-            <div class="product-img">商品圖</div>
+            <img src="https://placehold.co/600x400/0084ff/ffffff?text=Keyboard+Product" class="product-img" alt="商品圖">
+            
             <div>
-                <h3>超級好用的測試商品</h3>
-                <p>售價：$999</p>
+                <h3 style="margin: 0 0 10px 0;">頂級開發者機械鍵盤</h3>
+                <p style="margin: 0 0 15px 0;">這是一個模擬商品頁，Widget 會自動抓取標題與圖片傳回後台。</p>
+                <p style="color: #e74c3c; font-weight: bold; font-size: 1.2em;">$4,999</p>
                 <button class="btn">加入購物車</button>
             </div>
         </div>
@@ -44,27 +53,33 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
     <script>
-        // 模擬設定
+        // --- 模擬 Liquid 變數 ---
         var shopId = "test";
-        var token = "9999";
+        var token = "9999"; 
         var userId = "user_sim_001";
         var userName = "模擬客戶小明";
         
-        // ★★★ 測試頁專用：前端模擬 HMAC 簽章 ★★★
-        // 注意：這是在模擬 Liquid 伺服器的行為
-        var secretKey = "my_super_secret_key_2025"; // 必須跟 server.js 設定的一樣
+        // ★★★ 請修改這裡：填入 server.js 中設定給 'test' 商店的 Secret Key ★★★
+        // 如果您在 server.js 用了 randomBytes，請去 Render Logs 複製出來貼在這裡
+        // 如果您在 server.js 用了固定字串，請直接填入
+        var secretKey = "my_super_secret_key_2025"; 
         
         // 計算簽章: HMAC-SHA256( userId, secretKey )
         var signature = CryptoJS.HmacSHA256(userId, secretKey).toString(CryptoJS.enc.Hex);
         
-        console.log("模擬生成的簽章:", signature);
+        console.log("------------------------------------------------");
+        console.log("測試環境模擬數據:");
+        console.log("User ID:", userId);
+        console.log("Secret Key:", secretKey);
+        console.log("Generated Signature:", signature);
+        console.log("------------------------------------------------");
 
         window.ChatWidgetConfig = {
             shopId: shopId,
             token: token,
             userId: userId,
             userName: userName,
-            signature: signature, // ★ 帶上簽章，不然會被踢成訪客
+            signature: signature, // 帶上簽章
 
             // 離線自動回復設定
             autoReplyEnabled: true,
@@ -74,7 +89,7 @@
         };
     </script>
 
-    <script src="https://customer-support-xtpx.onrender.com/widget.js" async></script>
+    <script src="/widget.js" async></script>
 
 </body>
 </html>
