@@ -77,7 +77,6 @@
                 font-size: 26px; /* Emoji 大小 */
                 color: #888; 
                 line-height: 1; /* 避免文字行高影響對齊 */
-                padding-bottom: 4px; /* 微調 Emoji 的視覺重心 */
             }
             #cb-upload-btn:active { transform: scale(0.9); }
             #cb-file-input { display: none; }
