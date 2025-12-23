@@ -2,77 +2,116 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>多店家客服後台</title>
     <style>
-        body { font-family: "Microsoft JhengHei", sans-serif; display: flex; height: 100vh; margin: 0; background: #f4f6f8; }
+        /* 全域設定：使用 dvh (Dynamic Viewport Height) 解決手機網址列遮擋問題 */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; display: flex; height: 100vh; height: 100dvh; margin: 0; background: #f4f6f8; overflow: hidden; }
         
-        /* 登入遮罩 */
+        /* --- 登入遮罩 (RWD) --- */
         #login-modal { position: fixed; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-        .login-card { background: white; padding: 40px; border-radius: 8px; width: 300px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .login-card input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        .login-card button { width: 100%; padding: 12px; background: #0084ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        .login-card button:hover { background: #006ecd; }
-
-        /* 主畫面 */
-        #dashboard { display: none; width: 100%; height: 100%; }
+        .login-card { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .login-card input { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; /* 防止 iOS Zoom */ }
+        .login-card button { width: 100%; padding: 14px; background: #0084ff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        
+        /* --- 主畫面佈局 --- */
+        #dashboard { display: none; width: 100%; height: 100%; overflow: hidden; position: relative; }
         
         /* 左側列表 */
-        #sidebar { width: 300px; background: white; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; }
-        #shop-info-box { padding: 20px; background: #2c3e50; color: white; display: flex; justify-content: space-between; align-items: center; }
-        #shop-name { font-weight: bold; font-size: 16px; }
-        #logout-btn { background: #c0392b; border: none; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-        #logout-btn:hover { background: #e74c3c; }
-
-        #user-list { overflow-y: auto; flex: 1; }
+        #sidebar { width: 300px; background: white; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; height: 100%; z-index: 2; }
+        #shop-info-box { padding: 15px; background: #2c3e50; color: white; display: flex; justify-content: space-between; align-items: center; height: 50px; flex-shrink: 0; }
+        #logout-btn { background: #c0392b; border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; }
         
-        .user-row { padding: 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: 0.2s; position: relative; font-size: 14px; line-height: 1.4; display: flex; justify-content: space-between; align-items: center; }
-        .user-row:hover { background: #f9f9f9; }
+        #user-list { overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
+        
+        .user-row { padding: 18px 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .user-row:active { background: #f5f5f5; }
         .user-row.active { background: #e3f2fd; border-left: 4px solid #0084ff; }
-
-        .unread-badge { background-color: #ff3b30; color: white; border-radius: 12px; padding: 2px 8px; font-size: 12px; font-weight: bold; display: none; box-shadow: 0 2px 4px rgba(255, 59, 48, 0.3); }
+        .unread-badge { background-color: #ff3b30; color: white; border-radius: 12px; padding: 3px 8px; font-size: 12px; font-weight: bold; display: none; }
 
         /* 右側聊天區 */
-        #chat-main { flex: 1; display: flex; flex-direction: column; background: white; }
-        #chat-header { padding: 15px; border-bottom: 1px solid #eee; font-weight: bold; color: #555; background: #fafafa;}
-        #messages { flex: 1; padding: 20px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; gap: 10px; }
+        #chat-main { flex: 1; display: flex; flex-direction: column; background: white; height: 100%; position: relative; z-index: 1; }
+        
+        #chat-header { 
+            padding: 0 15px; height: 60px; border-bottom: 1px solid #eee; 
+            font-weight: bold; color: #333; background: #fafafa; 
+            display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0;
+        }
+        
+        /* 上一頁按鈕 (預設隱藏，手機版才顯示) */
+        #back-btn { display: none; background: none; border: none; font-size: 24px; cursor: pointer; color: #0084ff; padding-right: 10px; }
+
+        #messages { flex: 1; padding: 15px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
         
         /* 訊息樣式 */
-        .cb-msg-row { display: flex; flex-direction: column; max-width: 70%; }
+        .cb-msg-row { display: flex; flex-direction: column; max-width: 85%; }
         .cb-msg-row.user { align-self: flex-start; align-items: flex-start; }
         .cb-msg-row.admin { align-self: flex-end; align-items: flex-end; } 
 
-        .bubble { padding: 10px 15px; border-radius: 12px; font-size: 14px; line-height: 1.5; word-break: break-all; }
-        .bubble.admin { background: #0084ff; color: white; border-bottom-right-radius: 2px; }
-        .bubble.user { background: #f1f1f1; color: #333; border-bottom-left-radius: 2px; }
+        .bubble { padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.5; word-break: break-all; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .bubble.admin { background: #0084ff; color: white; border-bottom-right-radius: 4px; }
+        .bubble.user { background: #f1f1f1; color: #333; border-bottom-left-radius: 4px; }
         
-        /* ★ 新增：圖片訊息樣式 */
-        .bubble.image { background: transparent !important; padding: 0; }
-        .cb-msg-img { max-width: 200px; border-radius: 8px; cursor: pointer; border: 2px solid #ddd; }
+        .bubble.image { background: transparent !important; padding: 0; box-shadow: none; }
+        .cb-msg-img { max-width: 200px; border-radius: 12px; border: 1px solid #eee; }
 
-        .cb-time { font-size: 10px; color: #999; margin-top: 2px; margin-left: 4px; margin-right: 4px; }
+        .cb-time { font-size: 11px; color: #aaa; margin: 4px 2px 0; }
 
-        /* 輸入中提示 */
-        #typing-status { height: 20px; padding: 0 20px; font-size: 12px; color: #888; font-style: italic; display: flex; align-items: center; }
-        .typing-dots::after { content: '...'; animation: typing 1.5s infinite; }
-        @keyframes typing { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
+        /* 輸入區與工具列 */
+        #typing-status { height: 24px; padding: 0 15px; font-size: 12px; color: #888; display: flex; align-items: center; background: #fff; }
+        
+        #reply-box { 
+            padding: 10px 15px 15px 15px; /* 下方多留一點空間給手機 Home Bar */
+            border-top: 1px solid #eee; background: #fff; 
+            display: flex; align-items: center; gap: 10px; 
+            flex-shrink: 0;
+        }
+        
+        #reply-input { 
+            flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 24px; 
+            outline: none; font-size: 16px; /* 16px 是手機輸入框不放大的關鍵 */
+            background: #f9f9f9; -webkit-appearance: none;
+        }
+        #reply-input:focus { border-color: #0084ff; background: #fff; }
 
-        /* 輸入區 (修改為 Flex 佈局以容納按鈕) */
-        #reply-box { padding: 20px; border-top: 1px solid #ddd; background: #fafafa; display: flex; align-items: center; gap: 10px; }
-        #reply-input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; outline: none; font-size: 16px;}
-        #reply-input:focus { border-color: #0084ff; }
-
-        /* ★ 新增：上傳按鈕樣式 */
-        #upload-btn { cursor: pointer; font-size: 24px; color: #888; padding: 5px; line-height: 1; }
-        #upload-btn:hover { color: #0084ff; }
+        #upload-btn { cursor: pointer; font-size: 26px; color: #0084ff; padding: 5px; display: flex; align-items: center; }
         #file-input { display: none; }
+
+        /* --- ★★★ 關鍵 2: 手機版 Media Query ★★★ --- */
+        @media (max-width: 768px) {
+            #dashboard { display: block; } /* 取消 Flex，改用絕對定位切換 */
+            
+            /* 手機版初始狀態：只顯示列表，隱藏聊天室 */
+            #sidebar { width: 100%; position: absolute; top: 0; left: 0; display: flex; }
+            #chat-main { 
+                width: 100%; position: absolute; top: 0; left: 0; 
+                transform: translateX(100%); /* 先把聊天室移到螢幕右邊外面 */
+                transition: transform 0.3s ease-in-out;
+                z-index: 10;
+            }
+
+            /* 當有 .show-chat 類別時，顯示聊天室 */
+            #dashboard.show-chat #chat-main { transform: translateX(0); }
+            #dashboard.show-chat #sidebar { display: none; } /* 效能優化：看不到就隱藏 */
+
+            /* 顯示上一頁按鈕 */
+            #back-btn { display: block; }
+            
+            /* 調整手機版 Header */
+            #chat-header { padding-left: 5px; }
+            
+            /* 圖片在手機上可以大一點 */
+            .cb-msg-img { max-width: 70vw; }
+        }
     </style>
 </head>
 <body>
 
     <div id="login-modal">
         <div class="login-card">
-            <h2>客服後台登入</h2>
-            <input type="text" id="l_shop" placeholder="商店 ID (例如 shop_cyberbiz)">
+            <h2 style="margin-top:0; color:#333;">客服後台登入</h2>
+            <input type="text" id="l_shop" placeholder="商店 ID">
             <input type="password" id="l_pass" placeholder="管理密碼">
             <button onclick="login()">登入系統</button>
             <p id="l_err" style="color:red; margin-top:10px; font-size:14px;"></p>
@@ -87,15 +126,20 @@
             </div>
             <div id="user-list"></div>
         </div>
+
         <div id="chat-main">
-            <div id="chat-header">請選擇一位使用者</div>
+            <div id="chat-header">
+                <div style="display:flex; align-items:center;">
+                    <button id="back-btn" onclick="backToList()">❮</button>
+                    <span id="chat-title">請選擇使用者</span>
+                </div>
+            </div>
             <div id="messages"></div>
             <div id="typing-status"></div>
             <div id="reply-box">
                 <label for="file-input" id="upload-btn">📷</label>
                 <input type="file" id="file-input" accept="image/*">
-                
-                <input type="text" id="reply-input" placeholder="選擇使用者後開始對話..." disabled>
+                <input type="text" id="reply-input" placeholder="輸入訊息..." disabled>
             </div>
         </div>
     </div>
@@ -103,7 +147,6 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         const SERVER = '/'; 
-        
         let socket;
         let activeUser = null;
         let unreadCounts = {}; 
@@ -119,10 +162,21 @@
             }
         };
 
+        // --- 手機版切換邏輯 ---
+        function backToList() {
+            document.getElementById('dashboard').classList.remove('show-chat');
+            document.activeElement.blur(); // 收起鍵盤
+            activeUser = null;
+        }
+
+        function showChat() {
+            document.getElementById('dashboard').classList.add('show-chat');
+        }
+
+        // --- 登入邏輯 ---
         function login() {
             const shop = document.getElementById('l_shop').value.trim();
             const pass = document.getElementById('l_pass').value.trim();
-            
             if(!shop || !pass) { alert("請輸入帳號密碼"); return; }
             if(socket) socket.disconnect();
 
@@ -132,7 +186,6 @@
             });
 
             socket.on('connect', () => {
-                console.log("已連線至伺服器");
                 socket.emit('adminLogin', { password: pass });
             });
 
@@ -140,7 +193,11 @@
                 localStorage.setItem('admin_shop', shop);
                 localStorage.setItem('admin_pass', pass);
                 document.getElementById('login-modal').style.display = 'none';
-                document.getElementById('dashboard').style.display = 'flex';
+                
+                // 修正：手機版因為使用 absolute positioning，需要特定 display
+                const dash = document.getElementById('dashboard');
+                dash.style.display = (window.innerWidth <= 768) ? 'block' : 'flex';
+                
                 document.getElementById('shop-name').innerText = data.shopName;
             });
 
@@ -218,7 +275,13 @@
             const div = document.createElement('div');
             div.className = 'user-row';
             div.setAttribute('data-id', uid);
-            div.innerHTML = `<span>${name} <span style="font-size:12px;color:#888">(${uid})</span></span><span class="unread-badge">0</span>`;
+            div.innerHTML = `
+                <div style="display:flex; flex-direction:column;">
+                    <span style="font-weight:500; font-size:16px;">${name}</span>
+                    <span style="font-size:12px;color:#999; margin-top:4px;">${uid}</span>
+                </div>
+                <span class="unread-badge">0</span>
+            `;
             
             div.onclick = () => {
                 activeUser = uid;
@@ -229,13 +292,14 @@
                 const badge = div.querySelector('.unread-badge');
                 badge.style.display = 'none';
                 
-                document.getElementById('chat-header').innerText = `正在與 ${name} 對話`;
+                document.getElementById('chat-title').innerText = name;
                 document.getElementById('reply-input').disabled = false;
-                document.getElementById('reply-input').focus();
-                document.getElementById('messages').innerHTML = '<div style="text-align:center;color:#999;margin-top:20px;">載入歷史訊息中...</div>';
+                
+                // 進入聊天畫面 (手機版邏輯)
+                showChat();
+                document.getElementById('messages').innerHTML = '<div style="text-align:center;color:#999;margin-top:20px;">載入中...</div>';
                 
                 updateTypingStatus(false); 
-
                 socket.emit('adminJoinUser', { userId: uid });
             };
             
@@ -245,9 +309,7 @@
 
         function renderMsg(msg) {
             const box = document.getElementById('messages');
-            
             const lastMsg = box.lastElementChild;
-            // 簡單防重複 (若是文字)
             if (msg.msgType !== 'image' && lastMsg && lastMsg.innerText.includes(msg.text) && lastMsg.classList.contains(msg.sender)) {
                // return; 
             }
@@ -258,7 +320,6 @@
             const row = document.createElement('div');
             row.className = `cb-msg-row ${msg.sender}`;
             
-            // ★★★ 修改：判斷是文字還是圖片 ★★★
             let contentHtml = '';
             if (msg.msgType === 'image') {
                 contentHtml = `<div class="bubble image ${msg.sender}">
@@ -268,21 +329,16 @@
                 contentHtml = `<div class="bubble ${msg.sender}">${msg.text}</div>`;
             }
 
-            row.innerHTML = `
-                ${contentHtml}
-                <div class="cb-time">${timeStr}</div>
-            `;
+            row.innerHTML = `${contentHtml}<div class="cb-time">${timeStr}</div>`;
             
             box.appendChild(row);
             box.scrollTop = box.scrollHeight;
         }
 
         const input = document.getElementById('reply-input');
-        
         input.addEventListener('input', () => {
             if(activeUser) {
                 socket.emit('adminTyping', { targetUserId: activeUser, isTyping: true });
-                
                 clearTimeout(typingTimeout);
                 typingTimeout = setTimeout(() => {
                     socket.emit('adminTyping', { targetUserId: activeUser, isTyping: false });
@@ -292,19 +348,16 @@
 
         input.onkeypress = (e) => {
             if (e.key === 'Enter' && activeUser && e.target.value.trim() !== '') {
-                // 發送文字時，標記為 text
                 socket.emit('adminSendMessage', { targetUserId: activeUser, text: e.target.value, msgType: 'text' });
                 socket.emit('adminTyping', { targetUserId: activeUser, isTyping: false });
                 e.target.value = '';
             }
         };
 
-        // ★★★ 新增：後台圖片上傳邏輯 ★★★
+        // 圖片上傳
         const fileInput = document.getElementById('file-input');
-        
         fileInput.onchange = async function() {
             if(!activeUser) { alert("請先選擇使用者"); fileInput.value = ''; return; }
-            
             const file = fileInput.files[0];
             if (!file) return;
 
@@ -312,31 +365,20 @@
             formData.append('image', file);
 
             try {
-                input.placeholder = "圖片上傳中...";
+                input.placeholder = "上傳中...";
                 input.disabled = true;
-
-                // 呼叫後端 API
-                const res = await fetch(SERVER + 'upload', {
-                    method: 'POST',
-                    body: formData
-                });
+                const res = await fetch(SERVER + 'upload', { method: 'POST', body: formData });
                 const data = await res.json();
-
                 if (data.url) {
-                    // 發送圖片訊息
-                    socket.emit('adminSendMessage', { 
-                        targetUserId: activeUser, 
-                        text: data.url, 
-                        msgType: 'image' 
-                    });
+                    socket.emit('adminSendMessage', { targetUserId: activeUser, text: data.url, msgType: 'image' });
                 }
             } catch (err) {
                 console.error("Upload failed", err);
-                alert("圖片上傳失敗");
+                alert("上傳失敗");
             } finally {
                 input.placeholder = "輸入訊息...";
                 input.disabled = false;
-                fileInput.value = ''; // 清空，允許連續上傳
+                fileInput.value = '';
             }
         };
     </script>
