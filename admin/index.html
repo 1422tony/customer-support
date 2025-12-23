@@ -406,8 +406,41 @@
                 tagsDiv.innerHTML = '<span style="color:#999;font-style:italic;">無標籤</span>';
             }
 
-            document.getElementById('p-spent').innerText = data.totalSpent ? `$${new Intl.NumberFormat().format(data.totalSpent)}` : '$0';
+            // 3. 消費統計區塊 (修改這裡)
+            let spent = parseFloat(data.totalSpent || 0).toLocaleString();
+            document.getElementById('p-spent').innerText = `$${spent}`;
             document.getElementById('p-orders').innerText = data.ordersCount || '0';
+            
+            // ★★★ 新增：風險警示區塊 ★★★
+            // 如果有未取貨紀錄 (大於 0)，插入一個顯眼的紅色警告
+            const riskScore = parseInt(data.riskScore || 0);
+            
+            // 如果您還沒加 div，我直接用 JS 插在 profile-body 最上面
+            let alertHtml = '';
+            if (riskScore > 0) {
+                alertHtml = `
+                    <div style="background:#ffebee; color:#c62828; padding:10px; border-radius:8px; margin-bottom:15px; font-weight:bold; display:flex; align-items:center; gap:5px;">
+                        ⚠️ 警告：偵測到 ${riskScore} 次未取貨紀錄
+                    </div>
+                `;
+            }
+            
+            // 把警告插在 "標籤" 上面
+            const tagsRow = document.querySelector('.profile-body .data-row'); // 抓第一個 data-row
+            if(riskScore > 0) {
+                 // 避免重複插入，先檢查有無舊的
+                 const oldAlert = document.getElementById('js-risk-alert');
+                 if(oldAlert) oldAlert.remove();
+                 
+                 const alertDiv = document.createElement('div');
+                 alertDiv.id = 'js-risk-alert';
+                 alertDiv.innerHTML = alertHtml;
+                 tagsRow.parentNode.insertBefore(alertDiv, tagsRow);
+            } else {
+                 const oldAlert = document.getElementById('js-risk-alert');
+                 if(oldAlert) oldAlert.remove();
+            }
+
             document.getElementById('p-login').innerText = data.loginType || (userId.startsWith('guest') ? '訪客' : '一般會員');
         }
 
