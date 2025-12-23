@@ -127,7 +127,7 @@
                     
                     <input id="cb-input" placeholder="輸入訊息...">
                     
-                    <img src="/icon/send.png" id="cb-send-btn" alt="Send">
+                    <img src="https://customer-support-xtpx.onrender.com/icon/send.png" id="cb-send-btn" alt="Send">
                 </div>
             </div>
             <button id="cb-btn">💬</button>
