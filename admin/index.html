@@ -5,13 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>多店家客服後台</title>
     <style>
+        /* 全域設定 */
         body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; display: flex; height: 100vh; height: 100dvh; margin: 0; background: #f4f6f8; overflow: hidden; }
         
+        /* --- 登入遮罩 --- */
         #login-modal { position: fixed; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
         .login-card { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .login-card input { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         .login-card button { width: 100%; padding: 14px; background: #0084ff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; }
         
+        /* --- 主畫面佈局 --- */
         #dashboard { display: none; width: 100%; height: 100%; overflow: hidden; position: relative; }
         
         #sidebar { width: 300px; background: white; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; height: 100%; z-index: 2; }
@@ -47,13 +50,14 @@
         .bubble.user { background: #f1f1f1; color: #333; border-bottom-left-radius: 4px; }
         
         .bubble.image { background: transparent !important; padding: 0; box-shadow: none; }
-        .cb-msg-img { max-width: 200px; border-radius: 12px; border: 1px solid #eee; }
+        
+        /* 縮圖樣式 */
+        .cb-msg-img { max-width: 200px; border-radius: 12px; border: 1px solid #eee; cursor: zoom-in; /* 滑鼠變成放大鏡 */ }
 
         .cb-time { font-size: 11px; color: #aaa; margin: 4px 2px 0; }
 
         #typing-status { height: 24px; padding: 0 15px; font-size: 12px; color: #888; display: flex; align-items: center; background: #fff; }
         
-        /* 輸入區 RWD 設定 */
         #reply-box { 
             padding: 10px 15px 15px 15px; 
             border-top: 1px solid #eee; background: #fff; 
@@ -68,19 +72,45 @@
         }
         #reply-input:focus { border-color: #0084ff; background: #fff; }
 
-        /* 相機按鈕 */
         #upload-btn { cursor: pointer; font-size: 26px; color: #0084ff; padding: 5px; display: flex; align-items: center; }
         #file-input { display: none; }
 
-        /* ★ 新增：傳送按鈕樣式 */
         #send-btn { 
             width: 40px; height: 40px; 
             cursor: pointer; 
             margin-left: 2px;
-            border-radius: 50%; /* 圓形點擊區 */
+            border-radius: 50%; 
             transition: transform 0.1s;
         }
         #send-btn:active { transform: scale(0.9); background: #f0f0f0; }
+
+        /* --- ★★★ 新增：圖片燈箱 (Lightbox) 樣式 ★★★ --- */
+        #image-modal {
+            display: none; /* 預設隱藏 */
+            position: fixed; z-index: 2000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.9); /* 深黑背景 */
+            justify-content: center; align-items: center;
+            backdrop-filter: blur(5px); /* 背景模糊效果 (iOS支援) */
+            animation: fadeIn 0.2s;
+        }
+        #modal-img {
+            max-width: 95%; max-height: 95%;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            animation: zoomIn 0.2s;
+            object-fit: contain;
+        }
+        #close-modal {
+            position: absolute; top: 20px; right: 20px;
+            color: #fff; font-size: 30px; font-weight: bold;
+            cursor: pointer; z-index: 2001; background: rgba(0,0,0,0.5);
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+        @keyframes zoomIn { from {transform:scale(0.9);} to {transform:scale(1);} }
+
 
         @media (max-width: 768px) {
             #dashboard { display: block; }
@@ -95,7 +125,7 @@
             #dashboard.show-chat #sidebar { display: none; } 
             #back-btn { display: block; }
             #chat-header { padding-left: 5px; }
-            .cb-msg-img { max-width: 70vw; }
+            .cb-msg-img { max-width: 60vw; }
         }
     </style>
 </head>
@@ -109,6 +139,11 @@
             <button onclick="login()">登入系統</button>
             <p id="l_err" style="color:red; margin-top:10px; font-size:14px;"></p>
         </div>
+    </div>
+
+    <div id="image-modal" onclick="closeImageModal()">
+        <span id="close-modal">&times;</span>
+        <img id="modal-img">
     </div>
 
     <div id="dashboard">
@@ -132,9 +167,7 @@
             <div id="reply-box">
                 <label for="file-input" id="upload-btn">📷</label>
                 <input type="file" id="file-input" accept="image/*">
-                
                 <input type="text" id="reply-input" placeholder="輸入訊息..." disabled>
-                
                 <img src="/icon/send.png" id="send-btn" alt="Send">
             </div>
         </div>
@@ -166,6 +199,18 @@
 
         function showChat() {
             document.getElementById('dashboard').classList.add('show-chat');
+        }
+
+        // --- ★★★ 新增：圖片燈箱控制邏輯 ★★★ ---
+        function showImage(src) {
+            const modal = document.getElementById('image-modal');
+            const modalImg = document.getElementById('modal-img');
+            modal.style.display = "flex"; // 顯示燈箱
+            modalImg.src = src; // 設定圖片來源
+        }
+
+        function closeImageModal() {
+            document.getElementById('image-modal').style.display = "none";
         }
 
         function login() {
@@ -312,8 +357,9 @@
             
             let contentHtml = '';
             if (msg.msgType === 'image') {
+                // ★★★ 修改：圖片點擊觸發 showImage()，不再是 <a> 連結跳轉 ★★★
                 contentHtml = `<div class="bubble image ${msg.sender}">
-                    <a href="${msg.text}" target="_blank"><img src="${msg.text}" class="cb-msg-img"></a>
+                    <img src="${msg.text}" class="cb-msg-img" onclick="showImage(this.src)">
                 </div>`;
             } else {
                 contentHtml = `<div class="bubble ${msg.sender}">${msg.text}</div>`;
@@ -327,7 +373,6 @@
 
         const input = document.getElementById('reply-input');
         
-        // ★ 核心功能：發送文字邏輯 (Enter 與 按鈕共用)
         function sendTextMsg() {
             if (activeUser && input.value.trim() !== '') {
                 socket.emit('adminSendMessage', { targetUserId: activeUser, text: input.value, msgType: 'text' });
@@ -336,7 +381,6 @@
             }
         }
 
-        // 監聽輸入與打字狀態
         input.addEventListener('input', () => {
             if(activeUser) {
                 socket.emit('adminTyping', { targetUserId: activeUser, isTyping: true });
@@ -347,15 +391,12 @@
             }
         });
 
-        // 綁定鍵盤 Enter
         input.onkeypress = (e) => {
             if (e.key === 'Enter') sendTextMsg();
         };
 
-        // 綁定傳送按鈕點擊
         document.getElementById('send-btn').onclick = sendTextMsg;
 
-        // 圖片上傳
         const fileInput = document.getElementById('file-input');
         fileInput.onchange = async function() {
             if(!activeUser) { alert("請先選擇使用者"); fileInput.value = ''; return; }
