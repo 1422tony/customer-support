@@ -28,11 +28,16 @@
         #chat-main { flex: 1; display: flex; flex-direction: column; background: white; height: 100%; position: relative; z-index: 1; }
         
         #chat-header { 
-            padding: 0 15px; height: 50px; border-bottom: 1px solid #eee; 
-            font-weight: bold; color: #333; background: #fafafa; 
+            padding: 0 15px; height: 50px; border-bottom: 1px solid #eee;
+            font-weight: bold; color: #333; background: #fafafa;
             display: flex; align-items: center; justify-content: space-between;
             flex-shrink: 0;
         }
+
+        /* 頂部功能按鈕區 */
+        .header-actions { display: flex; gap: 10px; }
+        .icon-btn { background: none; border: none; cursor: pointer; font-size: 18px; padding: 5px; border-radius: 4px; color: #555; }
+        .icon-btn:hover { background: #eee; }
 
         #footprint-box {
             background: #fffbe6; border-bottom: 1px solid #ffe58f;
@@ -85,9 +90,43 @@
         input:checked + .slider { background-color: #2ecc71; } 
         input:checked + .slider:before { transform: translateX(24px); }
         
+        /* ★★★ 新增：右側客戶資訊卡 (Profile Sidebar) ★★★ */
+        #profile-sidebar {
+            width: 0; 
+            background: white; 
+            border-left: 1px solid #e0e0e0; 
+            transition: width 0.3s ease; 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column;
+        }
+        #profile-sidebar.open { width: 300px; }
+
+        .profile-header { padding: 20px; text-align: center; border-bottom: 1px solid #eee; background: #fafafa; }
+        .profile-avatar { width: 80px; height: 80px; background: #0084ff; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 10px; font-weight: bold;}
+        .profile-name { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 5px; }
+        .profile-id { font-size: 12px; color: #999; }
+
+        .profile-body { padding: 20px; flex: 1; overflow-y: auto; }
+        .data-row { margin-bottom: 20px; }
+        .data-label { font-size: 12px; color: #888; margin-bottom: 5px; font-weight: bold; text-transform: uppercase;}
+        .data-value { font-size: 15px; color: #333; word-break: break-all; display: flex; align-items: center; gap: 8px;}
+        
+        .tag { display: inline-block; padding: 2px 8px; background: #e3f2fd; color: #0084ff; border-radius: 12px; font-size: 12px; font-weight: bold; margin-right: 5px; }
+        .tag.vip { background: #fff8e1; color: #ff9800; border: 1px solid #ffe082; }
+
+        .stat-box { display: flex; justify-content: space-between; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .stat-item { text-align: center; flex: 1; }
+        .stat-num { font-size: 18px; font-weight: bold; color: #0084ff; display: block; }
+        .stat-desc { font-size: 12px; color: #666; }
+
         #status-text { font-size: 12px; color: #888; margin-right: 10px; }
 
         @media (max-width: 768px) {
+            /* 響應式：手機版覆蓋整個畫面 */
+            #profile-sidebar.open { position: absolute; top: 0; right: 0; width: 100%; height: 100%; z-index: 20; }
+            #close-profile-btn { display: block; position: absolute; top: 10px; right: 10px; font-size: 24px; cursor: pointer; padding: 10px; }
+
             #dashboard { display: block; }
             #sidebar { width: 100%; position: absolute; top: 0; left: 0; display: flex; }
             #chat-main { width: 100%; position: absolute; top: 0; left: 0; transform: translateX(100%); transition: transform 0.3s ease-in-out; z-index: 10; }
@@ -98,6 +137,7 @@
             .cb-msg-img { max-width: 60vw; }
             #footprint-link { max-width: 200px; }
         }
+        #close-profile-btn { display: none; }
     </style>
 </head>
 <body>
@@ -144,6 +184,9 @@
                     <button id="back-btn" onclick="backToList()">❮</button>
                     <span id="chat-title">請選擇使用者</span>
                 </div>
+                <div class="header-actions">
+                    <button class="icon-btn" onclick="toggleProfile()" title="查看客戶資料">👤</button>
+                </div>
             </div>
 
             <div id="footprint-box">
@@ -161,6 +204,47 @@
                 <img src="/icon/send.png" id="send-btn" alt="Send">
             </div>
         </div>
+
+        <div id="profile-sidebar">
+            <div id="close-profile-btn" onclick="toggleProfile()">✕</div>
+            
+            <div class="profile-header">
+                <div class="profile-avatar" id="p-avatar">?</div>
+                <div class="profile-name" id="p-name">載入中</div>
+                <div class="profile-id" id="p-id">ID: ...</div>
+            </div>
+
+            <div class="profile-body">
+                <div class="stat-box">
+                    <div class="stat-item">
+                        <span class="stat-num" id="p-spent">$0</span>
+                        <span class="stat-desc">累積消費</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-num" id="p-orders">0</span>
+                        <span class="stat-desc">訂單數</span>
+                    </div>
+                </div>
+
+                <div class="data-row">
+                    <div class="data-label">標籤 (Tags)</div>
+                    <div class="data-value" id="p-tags">
+                        <span style="color:#999;font-style:italic;">無標籤</span>
+                    </div>
+                </div>
+
+                <div class="data-row">
+                    <div class="data-label">聯絡資訊</div>
+                    <div class="data-value">📧 <span id="p-email">--</span></div>
+                    <div class="data-value" style="margin-top:5px;">📱 <span id="p-mobile">--</span></div>
+                </div>
+
+                <div class="data-row">
+                    <div class="data-label">登入方式</div>
+                    <div class="data-value" id="p-login">訪客</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -171,6 +255,9 @@
         let unreadCounts = {}; 
         let typingTimeout;    
         let userFootprints = {}; 
+
+        // ★ 儲存每個使用者的詳細資料
+        let userProfiles = {}; 
 
         window.onload = function() {
             const savedShop = localStorage.getItem('admin_shop');
@@ -225,6 +312,14 @@
                 list.innerHTML = '';
                 unreadCounts = {}; 
                 Object.keys(users).forEach(uid => renderUserInList(uid, users[uid]));
+            });
+
+            // ★★★ 接收使用者 Profile 更新 ★★★
+            socket.on('userProfileUpdate', (data) => {
+                userProfiles[data.userId] = data; // 存起來
+                if (activeUser === data.userId) {
+                    renderProfile(data.userId); // 如果正在看他，馬上更新介面
+                }
             });
 
             // 足跡更新
@@ -283,6 +378,64 @@
         }
 
         // --- 輔助函式 ---
+
+        // ★★★ 渲染資訊卡邏輯 ★★★
+        function renderProfile(userId) {
+            const data = userProfiles[userId] || {};
+            const name = document.getElementById('chat-title').innerText; // 從標題抓名字當備案
+
+            document.getElementById('p-avatar').innerText = (data.userName || name || "?")[0].toUpperCase();
+            document.getElementById('p-name').innerText = data.userName || name;
+            document.getElementById('p-id').innerText = "ID: " + userId;
+            
+            document.getElementById('p-email').innerText = data.email || "未提供";
+            document.getElementById('p-mobile').innerText = data.mobile || "未提供";
+            
+            // 處理標籤 (Cyberbiz 傳來的是逗號分隔字串)
+            const tagsDiv = document.getElementById('p-tags');
+            tagsDiv.innerHTML = '';
+            if (data.tags) {
+                data.tags.split(',').forEach(tag => {
+                    const span = document.createElement('span');
+                    span.className = 'tag';
+                    if(tag.includes('VIP')) span.className += ' vip'; // 特殊樣式
+                    span.innerText = tag;
+                    tagsDiv.appendChild(span);
+                });
+            } else {
+                tagsDiv.innerHTML = '<span style="color:#999;font-style:italic;">無標籤</span>';
+            }
+
+            document.getElementById('p-spent').innerText = data.totalSpent ? `$${new Intl.NumberFormat().format(data.totalSpent)}` : '$0';
+            document.getElementById('p-orders').innerText = data.ordersCount || '0';
+            document.getElementById('p-login').innerText = data.loginType || (userId.startsWith('guest') ? '訪客' : '一般會員');
+        }
+
+        function toggleProfile() {
+            const sidebar = document.getElementById('profile-sidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        // 切換使用者時
+        function selectUser(uid, name) {
+            activeUser = uid;
+            
+            document.querySelectorAll('.user-row').forEach(e => e.classList.remove('active'));
+            document.querySelector(`.user-row[data-id="${uid}"]`).classList.add('active');
+            
+            unreadCounts[uid] = 0; 
+            const badge = document.querySelector(`.user-row[data-id="${uid}"] .unread-badge`);
+            if (badge) badge.style.display = 'none';
+            
+            document.getElementById('chat-title').innerText = name;
+            document.getElementById('reply-input').disabled = false;
+            document.getElementById('messages').innerHTML = '<div style="text-align:center;color:#999;margin-top:20px;">載入中...</div>';
+            updateTypingStatus(false); 
+            showChat();
+            renderFootprint(userFootprints[uid]);
+            renderProfile(uid);
+            socket.emit('adminJoinUser', { userId: uid });
+        }
 
         function toggleOnline() {
             // 防呆：確保 socket 存在
@@ -368,25 +521,7 @@
                 </div>
                 <span class="unread-badge">0</span>
             `;
-            div.onclick = () => {
-                activeUser = uid;
-                document.querySelectorAll('.user-row').forEach(e => e.classList.remove('active'));
-                div.classList.add('active');
-                unreadCounts[uid] = 0; 
-                const badge = div.querySelector('.unread-badge');
-                badge.style.display = 'none';
-                
-                document.getElementById('chat-title').innerText = name;
-                document.getElementById('reply-input').disabled = false;
-                
-                showChat();
-                document.getElementById('messages').innerHTML = '<div style="text-align:center;color:#999;margin-top:20px;">載入中...</div>';
-                updateTypingStatus(false); 
-                
-                renderFootprint(userFootprints[uid]);
-
-                socket.emit('adminJoinUser', { userId: uid });
-            };
+            div.onclick = () => selectUser(uid, name);
             const list = document.getElementById('user-list');
             list.prepend(div); 
         }

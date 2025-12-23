@@ -212,7 +212,15 @@
             if(list) list.innerHTML = ''; 
             if(btn) btn.style.borderColor = '#00ff00';
 
-            reportPage();
+            // ★★★ 新增：傳送詳細的 CRM 資料 ★★★
+            if (config.userProfile) {
+                socket.emit('updateUserProfile', {
+                    userId: userId,
+                    ...config.userProfile
+                });
+            }
+            
+            reportPage(); // 原本的足跡追蹤
         });
 
         function reportPage() {

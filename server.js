@@ -316,6 +316,18 @@ io.on('connection', async (socket) => {
         });
     });
 
+    // ★★★ 新增：接收使用者的 CRM 資料 ★★★
+    socket.on('updateUserProfile', (data) => {
+        // data 包含 email, tags, totalSpent 等
+        // 廣播給該商店的管理員
+        io.to(`admin_${shopId}`).emit('userProfileUpdate', {
+            userId: userId, // 確保有 userId 才能對應
+            ...data,
+            // The userId from the data object is overridden to ensure it's the authenticated one
+            userId: userId
+        });
+    });
+
     socket.on('typing', (data) => {
         socket.to(roomName).emit('displayTyping', {
             userId: userId,
