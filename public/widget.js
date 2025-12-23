@@ -1,5 +1,5 @@
 (function() {
-    console.log(">>> Widget.js (v13.1 UI微調版) 啟動...");
+    console.log(">>> Widget.js (v13.2 UI完美對齊版) 啟動...");
 
     function renderUI() {
         if (document.getElementById('cb-container')) return;
@@ -36,71 +36,70 @@
             .cb-msg { padding: 10px 14px; border-radius: 18px; font-size: 15px; word-break: break-word; position: relative; }
             .cb-msg.user { background: #0084ff; color: white; border-bottom-right-radius: 4px; }
             .cb-msg.admin { background: #e4e6eb; color: #050505; border-bottom-left-radius: 4px; }
-            
             .cb-msg.image { background: transparent !important; padding: 0; }
             .cb-msg-img { max-width: 150px; border-radius: 8px; cursor: zoom-in; border: 2px solid #ddd; }
-
             .cb-time { font-size: 10px; color: #999; margin-top: 2px; margin-left: 4px; margin-right: 4px; }
 
             .typing-indicator { font-size: 12px; color: #888; padding: 5px 10px; display: none; font-style: italic; }
             .typing-dots::after { content: '...'; animation: typing 1.5s infinite; }
             @keyframes typing { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
 
-            /* Footer 設定 */
-            #cb-footer { padding: 10px; border-top: 1px solid #ddd; background: #fff; display: flex; align-items: center; gap: 8px; }
-            #cb-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; background: #f0f2f5; font-size: 16px; }
+            /* ★★★ 修改重點：Footer 佈局優化 ★★★ */
+            #cb-footer { 
+                padding: 10px; 
+                border-top: 1px solid #ddd; 
+                background: #fff; 
+                display: flex; 
+                align-items: center; /* 關鍵：垂直置中 */
+                gap: 8px; 
+            }
             
-            /* ★★★ 修改重點：讓上傳按鈕跟傳送按鈕一樣大 ★★★ */
+            #cb-input { 
+                flex: 1; 
+                padding: 10px; 
+                border: 1px solid #ddd; 
+                border-radius: 20px; 
+                outline: none; 
+                background: #f0f2f5; 
+                font-size: 16px; 
+                height: 40px; /* 強制設定輸入框高度，避免被撐開 */
+                box-sizing: border-box;
+            }
+            
+            /* 相機按鈕 (Emoji) */
             #cb-upload-btn { 
-                width: 36px;           /* 設定固定寬度 */
-                height: 36px;          /* 設定固定高度 */
-                display: flex;         /* 使用 Flex */
-                align-items: center;   /* 垂直置中 */
-                justify-content: center; /* 水平置中 */
+                width: 40px;           
+                height: 40px;          
+                display: flex;         
+                align-items: center;   
+                justify-content: center; 
                 cursor: pointer; 
-                font-size: 24px; 
+                font-size: 26px; /* Emoji 大小 */
                 color: #888; 
-                transition: color 0.2s;
+                line-height: 1; /* 避免文字行高影響對齊 */
+                padding-bottom: 4px; /* 微調 Emoji 的視覺重心 */
             }
             #cb-upload-btn:active { transform: scale(0.9); }
             #cb-file-input { display: none; }
             
-            /* 傳送按鈕 (保持原本大小) */
+            /* ★★★ 修改重點：傳送按鈕 (圖片) ★★★ */
             #cb-send-btn { 
-                width: 36px; height: 36px; 
-                display: flex; align-items: center; justify-content: center;
-                cursor: pointer; border-radius: 50%; color: #0084ff;
-                transition: background 0.1s;
+                width: 36px;  /* 稍微比相機小一點點，視覺上會比較平衡 */
+                height: 36px; 
+                cursor: pointer; 
+                transition: transform 0.1s;
+                object-fit: contain; /* 確保圖片不變形 */
+                margin-left: 2px;
             }
-            #cb-send-btn:active { background: #f0f0f0; }
-            #cb-send-btn svg { width: 24px; height: 24px; fill: currentColor; transform: rotate(-45deg); margin-left: -2px; margin-top: 2px; }
+            #cb-send-btn:active { transform: scale(0.9); }
 
             /* 燈箱設定 */
-            #cb-image-modal {
-                display: none; position: fixed; z-index: 2147483620;
-                left: 0; top: 0; width: 100%; height: 100%;
-                background-color: rgba(0,0,0,0.9);
-                justify-content: center; align-items: center;
-                backdrop-filter: blur(5px);
-                animation: cbFadeIn 0.2s;
-            }
-            #cb-modal-img {
-                max-width: 95%; max-height: 95%;
-                border-radius: 4px;
-                object-fit: contain;
-                animation: cbZoomIn 0.2s;
-            }
-            #cb-close-modal {
-                position: absolute; top: 20px; right: 20px;
-                color: #fff; font-size: 30px; font-weight: bold;
-                cursor: pointer; z-index: 2147483621; background: rgba(0,0,0,0.5);
-                width: 40px; height: 40px; border-radius: 50%;
-                display: flex; align-items: center; justify-content: center;
-            }
+            #cb-image-modal { display: none; position: fixed; z-index: 2147483620; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; backdrop-filter: blur(5px); animation: cbFadeIn 0.2s; }
+            #cb-modal-img { max-width: 95%; max-height: 95%; border-radius: 4px; object-fit: contain; animation: cbZoomIn 0.2s; }
+            #cb-close-modal { position: absolute; top: 20px; right: 20px; color: #fff; font-size: 30px; font-weight: bold; cursor: pointer; z-index: 2147483621; background: rgba(0,0,0,0.5); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
             @keyframes cbFadeIn { from {opacity:0;} to {opacity:1;} }
             @keyframes cbZoomIn { from {transform:scale(0.9);} to {transform:scale(1);} }
             
-            /* 狀態燈號樣式 */
             .status-dot { display: inline-block; width: 10px; height: 10px; background-color: #ccc; border-radius: 50%; margin-right: 8px; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.2); transition: background-color 0.3s; }
             .status-dot.online { background-color: #2ecc71; box-shadow: 0 0 8px #2ecc71; } 
             .status-dot.offline { background-color: #e74c3c; } 
@@ -125,10 +124,10 @@
                 <div id="cb-footer">
                     <label for="cb-file-input" id="cb-upload-btn">📷</label>
                     <input type="file" id="cb-file-input" accept="image/*">
+                    
                     <input id="cb-input" placeholder="輸入訊息...">
-                    <div id="cb-send-btn">
-                        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                    </div>
+                    
+                    <img src="/icon/send.png" id="cb-send-btn" alt="Send">
                 </div>
             </div>
             <button id="cb-btn">💬</button>
@@ -143,7 +142,6 @@
         var btn = document.getElementById('cb-btn');
         var box = document.getElementById('cb-box');
         var closeMobile = document.getElementById('cb-close-mobile');
-        
         var modal = document.getElementById('cb-image-modal');
         var closeBtn = document.getElementById('cb-close-modal');
         
