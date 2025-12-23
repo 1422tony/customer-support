@@ -172,31 +172,6 @@
         let typingTimeout;    
         let userFootprints = {}; 
 
-        socket.on('loginSuccess', (data) => {
-            const toggle = document.getElementById('online-toggle');
-            toggle.checked = data.isOnline;
-            updateStatusText(data.isOnline);
-        });
-
-        socket.on('shopStatusUpdate', (data) => {
-            const toggle = document.getElementById('online-toggle');
-            toggle.checked = data.isOnline;
-            updateStatusText(data.isOnline);
-        });
-
-        function toggleOnline() {
-            const toggle = document.getElementById('online-toggle');
-            const isOnline = toggle.checked;
-            socket.emit('adminToggleStatus', { isOnline: isOnline });
-            updateStatusText(isOnline);
-        }
-
-        function updateStatusText(isOnline) {
-            const text = document.getElementById('status-text');
-            text.innerText = isOnline ? "線上待命" : "暫時離開";
-            text.style.color = isOnline ? "#2ecc71" : "#aaa";
-        }
-
         window.onload = function() {
             const savedShop = localStorage.getItem('admin_shop');
             const savedPass = localStorage.getItem('admin_pass');
@@ -207,38 +182,20 @@
             }
         };
 
-        function backToList() {
-            document.getElementById('dashboard').classList.remove('show-chat');
-            document.activeElement.blur(); 
-            activeUser = null;
-        }
-
-        function showChat() {
-            document.getElementById('dashboard').classList.add('show-chat');
-        }
-
-        function showImage(src) {
-            const modal = document.getElementById('image-modal');
-            const modalImg = document.getElementById('modal-img');
-            modal.style.display = "flex";
-            modalImg.src = src;
-        }
-
-        function closeImageModal() {
-            document.getElementById('image-modal').style.display = "none";
-        }
-
+        // --- 核心連線邏輯 (修正版) ---
         function login() {
             const shop = document.getElementById('l_shop').value.trim();
             const pass = document.getElementById('l_pass').value.trim();
             if(!shop || !pass) { alert("請輸入帳號密碼"); return; }
             if(socket) socket.disconnect();
 
+            // 1. 初始化 Socket
             socket = io(SERVER, {
                 auth: { shopId: shop, isAdmin: true },
                 transports: ['websocket', 'polling']
             });
 
+            // 2. 綁定所有事件監聽器 (必須在 socket 初始化之後)
             socket.on('connect', () => {
                 socket.emit('adminLogin', { password: pass });
             });
@@ -250,6 +207,11 @@
                 const dash = document.getElementById('dashboard');
                 dash.style.display = (window.innerWidth <= 768) ? 'block' : 'flex';
                 document.getElementById('shop-name').innerText = data.shopName;
+                
+                // 更新狀態開關
+                const toggle = document.getElementById('online-toggle');
+                toggle.checked = data.isOnline;
+                updateStatusText(data.isOnline);
             });
 
             socket.on('loginError', (err) => {
@@ -265,11 +227,19 @@
                 Object.keys(users).forEach(uid => renderUserInList(uid, users[uid]));
             });
 
+            // 足跡更新
             socket.on('userPageUpdate', (data) => {
                 userFootprints[data.userId] = data;
                 if (activeUser === data.userId) {
                     renderFootprint(data);
                 }
+            });
+
+            // 客服狀態更新 (同步用)
+            socket.on('shopStatusUpdate', (data) => {
+                const toggle = document.getElementById('online-toggle');
+                toggle.checked = data.isOnline;
+                updateStatusText(data.isOnline);
             });
 
             socket.on('updateUserList', (msg) => {
@@ -310,6 +280,44 @@
                     updateTypingStatus(data.isTyping);
                 }
             });
+        }
+
+        // --- 輔助函式 ---
+
+        function toggleOnline() {
+            // 防呆：確保 socket 存在
+            if (!socket) return; 
+            const toggle = document.getElementById('online-toggle');
+            const isOnline = toggle.checked;
+            socket.emit('adminToggleStatus', { isOnline: isOnline });
+            updateStatusText(isOnline);
+        }
+
+        function updateStatusText(isOnline) {
+            const text = document.getElementById('status-text');
+            text.innerText = isOnline ? "線上待命" : "暫時離開";
+            text.style.color = isOnline ? "#2ecc71" : "#aaa";
+        }
+
+        function backToList() {
+            document.getElementById('dashboard').classList.remove('show-chat');
+            document.activeElement.blur(); 
+            activeUser = null;
+        }
+
+        function showChat() {
+            document.getElementById('dashboard').classList.add('show-chat');
+        }
+
+        function showImage(src) {
+            const modal = document.getElementById('image-modal');
+            const modalImg = document.getElementById('modal-img');
+            modal.style.display = "flex";
+            modalImg.src = src;
+        }
+
+        function closeImageModal() {
+            document.getElementById('image-modal').style.display = "none";
         }
 
         function updateTypingStatus(isTyping) {
@@ -385,10 +393,6 @@
 
         function renderMsg(msg) {
             const box = document.getElementById('messages');
-            const lastMsg = box.lastElementChild;
-            if (msg.msgType !== 'image' && lastMsg && lastMsg.innerText.includes(msg.text) && lastMsg.classList.contains(msg.sender)) {
-               // return; 
-            }
             var date = new Date(msg.timestamp);
             var timeStr = date.getHours().toString().padStart(2, '0') + ":" + date.getMinutes().toString().padStart(2, '0');
             const row = document.createElement('div');
@@ -408,14 +412,15 @@
 
         const input = document.getElementById('reply-input');
         function sendTextMsg() {
-            if (activeUser && input.value.trim() !== '') {
+            // 防呆：確保 socket 存在且 activeUser 存在
+            if (socket && activeUser && input.value.trim() !== '') {
                 socket.emit('adminSendMessage', { targetUserId: activeUser, text: input.value, msgType: 'text' });
                 socket.emit('adminTyping', { targetUserId: activeUser, isTyping: false });
                 input.value = '';
             }
         }
         input.addEventListener('input', () => {
-            if(activeUser) {
+            if(activeUser && socket) {
                 socket.emit('adminTyping', { targetUserId: activeUser, isTyping: true });
                 clearTimeout(typingTimeout);
                 typingTimeout = setTimeout(() => {
@@ -429,6 +434,7 @@
         const fileInput = document.getElementById('file-input');
         fileInput.onchange = async function() {
             if(!activeUser) { alert("請先選擇使用者"); fileInput.value = ''; return; }
+            if(!socket) { alert("尚未連線"); return; }
             const file = fileInput.files[0];
             if (!file) return;
             const formData = new FormData();
