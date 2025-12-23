@@ -1,12 +1,12 @@
 (function() {
-    console.log(">>> Widget.js (v12.0 足跡追蹤版) 啟動...");
+    console.log(">>> Widget.js (v13.1 UI微調版) 啟動...");
 
     function renderUI() {
         if (document.getElementById('cb-container')) return;
 
         var style = document.createElement('style');
         style.innerHTML = `
-            /* 基礎 Z-Index 設定 (避開手機版被遮擋問題) */
+            /* 基礎 Z-Index 設定 */
             #cb-container { position: fixed; right: 20px; bottom: 48px; z-index: 2147483600; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; pointer-events: auto; font-family: sans-serif; }
             
             #cb-btn { width: 60px; height: 60px; background: #0084ff; border-radius: 50%; color: white; border: 2px solid white; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); font-size: 30px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
@@ -46,12 +46,26 @@
             .typing-dots::after { content: '...'; animation: typing 1.5s infinite; }
             @keyframes typing { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
 
+            /* Footer 設定 */
             #cb-footer { padding: 10px; border-top: 1px solid #ddd; background: #fff; display: flex; align-items: center; gap: 8px; }
             #cb-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; background: #f0f2f5; font-size: 16px; }
             
-            #cb-upload-btn { cursor: pointer; font-size: 24px; color: #888; padding: 0 5px; line-height: 1; }
+            /* ★★★ 修改重點：讓上傳按鈕跟傳送按鈕一樣大 ★★★ */
+            #cb-upload-btn { 
+                width: 36px;           /* 設定固定寬度 */
+                height: 36px;          /* 設定固定高度 */
+                display: flex;         /* 使用 Flex */
+                align-items: center;   /* 垂直置中 */
+                justify-content: center; /* 水平置中 */
+                cursor: pointer; 
+                font-size: 24px; 
+                color: #888; 
+                transition: color 0.2s;
+            }
+            #cb-upload-btn:active { transform: scale(0.9); }
             #cb-file-input { display: none; }
             
+            /* 傳送按鈕 (保持原本大小) */
             #cb-send-btn { 
                 width: 36px; height: 36px; 
                 display: flex; align-items: center; justify-content: center;
@@ -59,7 +73,7 @@
                 transition: background 0.1s;
             }
             #cb-send-btn:active { background: #f0f0f0; }
-            #cb-send-btn svg { width: 24px; height: 28px; fill: currentColor; transform: rotate(-45deg); margin-left: -2px; margin-top: 2px; }
+            #cb-send-btn svg { width: 24px; height: 24px; fill: currentColor; transform: rotate(-45deg); margin-left: -2px; margin-top: 2px; }
 
             /* 燈箱設定 */
             #cb-image-modal {
@@ -201,13 +215,10 @@
             if(list) list.innerHTML = ''; 
             if(btn) btn.style.borderColor = '#00ff00';
 
-            // ★★★ 新增：連線後，立刻回報當前頁面資訊 (足跡) ★★★
             reportPage();
         });
 
-        // ★★★ 足跡回報函式 ★★★
         function reportPage() {
-            // 嘗試抓取 Open Graph 標籤 (Cyberbiz 商品頁通常都有)
             var ogTitle = document.querySelector('meta[property="og:title"]');
             var ogImage = document.querySelector('meta[property="og:image"]');
             
@@ -217,7 +228,6 @@
                 image: ogImage ? ogImage.content : ''
             };
             
-            // 發送事件給後端
             socket.emit('pageChange', payload);
         }
 
@@ -226,7 +236,6 @@
             localStorage.setItem(GUEST_KEY, data.userId);
         });
 
-        // 監聽後端回傳的客服在線狀態
         socket.on('shopStatusUpdate', function(data) {
             var dot = document.getElementById('cb-status-dot');
             var text = document.getElementById('cb-status-text');
