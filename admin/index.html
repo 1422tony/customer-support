@@ -90,7 +90,7 @@
         input:checked + .slider { background-color: #2ecc71; } 
         input:checked + .slider:before { transform: translateX(24px); }
         
-        /* ★★★ 新增：右側客戶資訊卡 (Profile Sidebar) ★★★ */
+        /* ★★★ 右側客戶資訊卡 (Profile Sidebar) ★★★ */
         #profile-sidebar {
             width: 0; 
             background: white; 
@@ -99,10 +99,11 @@
             overflow: hidden; 
             display: flex; 
             flex-direction: column;
+            position: relative; /* 為了定位返回按鈕 */
         }
         #profile-sidebar.open { width: 300px; }
 
-        .profile-header { padding: 20px; text-align: center; border-bottom: 1px solid #eee; background: #fafafa; }
+        .profile-header { padding: 30px 20px 20px; text-align: center; border-bottom: 1px solid #eee; background: #fafafa; }
         .profile-avatar { width: 80px; height: 80px; background: #0084ff; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 10px; font-weight: bold;}
         .profile-name { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 5px; }
         .profile-id { font-size: 12px; color: #999; }
@@ -114,6 +115,7 @@
         
         .tag { display: inline-block; padding: 2px 8px; background: #e3f2fd; color: #0084ff; border-radius: 12px; font-size: 12px; font-weight: bold; margin-right: 5px; }
         .tag.vip { background: #fff8e1; color: #ff9800; border: 1px solid #ffe082; }
+        .tag.risk { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
 
         .stat-box { display: flex; justify-content: space-between; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .stat-item { text-align: center; flex: 1; }
@@ -121,11 +123,29 @@
         .stat-desc { font-size: 12px; color: #666; }
 
         #status-text { font-size: 12px; color: #888; margin-right: 10px; }
+        
+        /* ★★★ 新增：手機版資訊卡返回按鈕樣式 ★★★ */
+        #profile-back-btn { 
+            display: none; 
+            position: absolute; 
+            top: 10px; 
+            left: 10px; 
+            background: none; 
+            border: none; 
+            font-size: 24px; 
+            cursor: pointer; 
+            color: #0084ff; 
+            z-index: 25; 
+            padding: 5px;
+        }
 
         @media (max-width: 768px) {
             /* 響應式：手機版覆蓋整個畫面 */
             #profile-sidebar.open { position: absolute; top: 0; right: 0; width: 100%; height: 100%; z-index: 20; }
             #close-profile-btn { display: block; position: absolute; top: 10px; right: 10px; font-size: 24px; cursor: pointer; padding: 10px; }
+            
+            /* ★ 手機版顯示返回按鈕 */
+            #profile-back-btn { display: block; }
 
             #dashboard { display: block; }
             #sidebar { width: 100%; position: absolute; top: 0; left: 0; display: flex; }
@@ -206,6 +226,8 @@
         </div>
 
         <div id="profile-sidebar">
+            <button id="profile-back-btn" onclick="toggleProfile()">❮</button>
+            
             <div id="close-profile-btn" onclick="toggleProfile()">✕</div>
             
             <div class="profile-header">
@@ -386,19 +408,23 @@
 
             document.getElementById('p-avatar').innerText = (data.userName || name || "?")[0].toUpperCase();
             document.getElementById('p-name').innerText = data.userName || name;
-            document.getElementById('p-id').innerText = "ID: " + userId;
+            
+            // 狀態燈號
+            let statusDot = data.accountStatus === 'enabled' ? '🟢' : '🔴';
+            document.getElementById('p-id').innerText = `${statusDot} ID: ${userId}`;
             
             document.getElementById('p-email').innerText = data.email || "未提供";
             document.getElementById('p-mobile').innerText = data.mobile || "未提供";
             
-            // 處理標籤 (Cyberbiz 傳來的是逗號分隔字串)
+            // 處理標籤
             const tagsDiv = document.getElementById('p-tags');
             tagsDiv.innerHTML = '';
-            if (data.tags) {
+            if (data.tags && data.tags.trim() !== '') {
                 data.tags.split(',').forEach(tag => {
                     const span = document.createElement('span');
                     span.className = 'tag';
-                    if(tag.includes('VIP')) span.className += ' vip'; // 特殊樣式
+                    if(tag.includes('VIP') || tag.includes('黑名單')) span.className += ' vip'; 
+                    if(tag.includes('黑名單') || tag.includes('未取貨') || tag.includes('風險')) span.className += ' risk';
                     span.innerText = tag;
                     tagsDiv.appendChild(span);
                 });
@@ -412,10 +438,8 @@
             document.getElementById('p-orders').innerText = data.ordersCount || '0';
             
             // ★★★ 新增：風險警示區塊 ★★★
-            // 如果有未取貨紀錄 (大於 0)，插入一個顯眼的紅色警告
             const riskScore = parseInt(data.riskScore || 0);
             
-            // 如果您還沒加 div，我直接用 JS 插在 profile-body 最上面
             let alertHtml = '';
             if (riskScore > 0) {
                 alertHtml = `
@@ -428,7 +452,6 @@
             // 把警告插在 "標籤" 上面
             const tagsRow = document.querySelector('.profile-body .data-row'); // 抓第一個 data-row
             if(riskScore > 0) {
-                 // 避免重複插入，先檢查有無舊的
                  const oldAlert = document.getElementById('js-risk-alert');
                  if(oldAlert) oldAlert.remove();
                  
@@ -441,7 +464,12 @@
                  if(oldAlert) oldAlert.remove();
             }
 
-            document.getElementById('p-login').innerText = data.loginType || (userId.startsWith('guest') ? '訪客' : '一般會員');
+            // 行銷與登入資訊
+            let marketingIcon = (data.acceptsMarketing === 'true') ? '✅ 願意接收行銷' : '🔕 拒絕行銷';
+            document.getElementById('p-login').innerHTML = `
+                <div>${data.loginType || (userId.startsWith('guest') ? '訪客' : '一般會員')}</div>
+                <div style="margin-top:4px;font-size:12px;color:#666;">${marketingIcon}</div>
+            `;
         }
 
         function toggleProfile() {
