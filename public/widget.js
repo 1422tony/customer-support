@@ -59,7 +59,7 @@
                 transition: background 0.1s;
             }
             #cb-send-btn:active { background: #f0f0f0; }
-            #cb-send-btn svg { width: 24px; height: 24px; fill: currentColor; transform: rotate(-45deg); margin-left: -2px; margin-top: 2px; }
+            #cb-send-btn svg { width: 24px; height: 28px; fill: currentColor; transform: rotate(-45deg); margin-left: -2px; margin-top: 2px; }
 
             /* 燈箱設定 */
             #cb-image-modal {
