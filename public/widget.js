@@ -1,13 +1,12 @@
 (function() {
-    console.log(">>> Widget.js (v11.1 層級修復版) 啟動...");
+    console.log(">>> Widget.js (v11.2 自動捲動修復版) 啟動...");
 
     function renderUI() {
         if (document.getElementById('cb-container')) return;
 
         var style = document.createElement('style');
         style.innerHTML = `
-            /* ★ 修改 1: 將基礎 Z-Index 稍微調降，預留空間給上層元素 */
-            /* 2147483647 是瀏覽器最大值，我們減去 50，設為 ...600 */
+            /* 基礎 Z-Index 設定 */
             #cb-container { position: fixed; right: 20px; bottom: 48px; z-index: 2147483600; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; pointer-events: auto; font-family: sans-serif; }
             
             #cb-btn { width: 60px; height: 60px; background: #0084ff; border-radius: 50%; color: white; border: 2px solid white; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); font-size: 30px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
@@ -19,8 +18,6 @@
             @media (max-width: 768px) { 
                 #cb-container { bottom: 60px !important; right: 20px !important; } 
                 #cb-btn { width: 55px; height: 55px; } 
-                
-                /* ★ 修改 2: 手機版聊天室設為 ...610 (比 Container 高) */
                 #cb-box { 
                     position: fixed; bottom: 0; right: 0; width: 100%; height: 100%; 
                     z-index: 2147483610; 
@@ -64,7 +61,7 @@
             #cb-send-btn:active { background: #f0f0f0; }
             #cb-send-btn svg { width: 24px; height: 24px; fill: currentColor; transform: rotate(-45deg); margin-left: -2px; margin-top: 2px; }
 
-            /* ★ 修改 3: 燈箱設為 ...620 (最高層級)，確保在聊天室之上 */
+            /* 燈箱 Z-Index 最高 */
             #cb-image-modal {
                 display: none; position: fixed; z-index: 2147483620;
                 left: 0; top: 0; width: 100%; height: 100%;
@@ -94,8 +91,6 @@
         var container = document.createElement('div');
         container.id = 'cb-container';
         
-        // ★ 修改 4: 調整 DOM 順序，將燈箱 (Modal) 放到 HTML 的最後面
-        // 這樣就算 Z-Index 失效，DOM 順序也能保證它在最上層
         container.innerHTML = `
             <div id="cb-box">
                 <div id="cb-head"><span>客服中心</span><span id="cb-close-mobile" style="display:none;">&times;</span></div>
@@ -137,7 +132,24 @@
             modalImg.src = src;
         };
 
-        function toggle() { var isHidden = (box.style.display === 'none' || box.style.display === ''); box.style.display = isHidden ? 'flex' : 'none'; if (window.innerWidth <= 768) document.body.style.overflow = isHidden ? 'hidden' : ''; }
+        // ★★★ 修改：Toggle 函式加入強制捲動邏輯 ★★★
+        function toggle() { 
+            var isHidden = (box.style.display === 'none' || box.style.display === ''); 
+            box.style.display = isHidden ? 'flex' : 'none'; 
+            
+            // 如果是「打開」的動作
+            if (isHidden) {
+                var list = document.getElementById('cb-list');
+                if (list) {
+                    // 使用 setTimeout 讓瀏覽器先完成顯示 (display:flex)，再來計算高度
+                    setTimeout(function() {
+                        list.scrollTop = list.scrollHeight;
+                    }, 10); // 10ms 就足夠了
+                }
+            }
+
+            if (window.innerWidth <= 768) document.body.style.overflow = isHidden ? 'hidden' : ''; 
+        }
         btn.onclick = toggle; closeMobile.onclick = toggle;
     }
 
