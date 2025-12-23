@@ -30,15 +30,16 @@ const ShopSchema = new mongoose.Schema({
     name: String,
     secretKey: String, 
     publicToken: String,
-    verificationType: { type: String, default: 'token' }
+    verificationType: { type: String, default: 'token' },
+    isOnline: { type: Boolean, default: true } // ★ 狀態預設上線
 });
 
 const MessageSchema = new mongoose.Schema({
     shopId: String,
     userId: String,
     userName: String,
-    text: String,     // 如果是圖片，這裡會存 "https://res.cloudinary.....jpg"
-    msgType: { type: String, default: 'text' }, // 分辨是 'text' 還是 'image'
+    text: String,
+    msgType: { type: String, default: 'text' }, 
     sender: String,
     timestamp: { type: Number, default: Date.now }
 });
@@ -56,9 +57,8 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
-        folder: 'chat-app', // 圖片會存在這個資料夾
+        folder: 'chat-app',
         allowed_formats: ['jpg', 'png', 'jpeg', 'gif'],
-        // 自動壓縮與縮圖設定
         transformation: [
             { width: 1000, crop: "limit" }, 
             { quality: "auto" },            
@@ -92,9 +92,9 @@ const io = new Server(server, {
     transports: ['websocket', 'polling']
 });
 
-// --- 驗證邏輯 (已修正) ---
+// --- 驗證邏輯 ---
 function verifyIdentity(shopConfig, authData) {
-    const { token, signature, userId, userName } = authData;
+    const { token, signature, userId } = authData;
 
     // 1. 如果資料庫還沒設定 secretKey，降級檢查 Token
     if (!shopConfig.secretKey) {
@@ -103,22 +103,16 @@ function verifyIdentity(shopConfig, authData) {
 
     // 2. 如果有傳簽章，進行 HMAC 驗證
     if (signature) {
-        // ★★★ 關鍵修正：Payload 必須跟 Liquid 端完全一致 (只包含 userId) ★★★
         const payload = String(userId); 
-
         const expectedSig = crypto
             .createHmac('sha256', shopConfig.secretKey)
             .update(payload)
             .digest('hex');
 
-        console.log(`[驗證] User: ${userId}`);
-        console.log(`       Client Sig: ${signature}`);
-        console.log(`       Server Sig: ${expectedSig}`);
-
+        console.log(`[驗證] User: ${userId} | Client: ${signature} | Server: ${expectedSig}`);
         return expectedSig === signature;
     }
     
-    // 3. 如果沒簽章但有 Key，視為驗證失敗 (或者您可以選擇降級)
     return false;
 }
 
@@ -126,7 +120,6 @@ function verifyIdentity(shopConfig, authData) {
 async function initDefaultShop() {
     // 1. 原本的 Cyberbiz 商店
     const defaultId = 'genius_0201';
-    // 這裡使用 updateOne 加上 upsert: true，確保如果商店存在會更新 secretKey
     await Shop.updateOne(
         { shopId: defaultId },
         {
@@ -135,7 +128,7 @@ async function initDefaultShop() {
                 name: '天才美術社 (Cyberbiz)',
                 publicToken: 'genius_0201_token_888',
                 verificationType: 'token',
-                secretKey: "my_super_secret_key_2025" // 確保 Key 被寫入
+                secretKey: "my_super_secret_key_2025" 
             }
         },
         { upsert: true }
@@ -188,7 +181,12 @@ io.on('connection', async (socket) => {
             if (shop.password === password) {
                 console.log(`[管理員登入] ${shop.name}`);
                 socket.join(`admin_${shopId}`);
-                socket.emit('loginSuccess', { shopName: shop.name });
+                
+                // ★ 回傳 isOnline 狀態給管理員
+                socket.emit('loginSuccess', { 
+                    shopName: shop.name,
+                    isOnline: shop.isOnline 
+                });
 
                 // 取得使用者列表
                 const msgs = await Message.find({ shopId });
@@ -201,6 +199,20 @@ io.on('connection', async (socket) => {
                 socket.emit('initUserList', users);
             } else {
                 socket.emit('loginError', '密碼錯誤');
+            }
+        });
+
+        // ★★★ 新增：管理員切換上下線狀態 ★★★
+        socket.on('adminToggleStatus', async (data) => {
+            // data = { isOnline: true/false }
+            await Shop.updateOne({ shopId }, { isOnline: data.isOnline });
+            
+            // 廣播給所有連上這個 shop 的 socket (包含管理員自己和前台客戶)
+            const sockets = await io.fetchSockets();
+            for (const s of sockets) {
+                if (s.handshake.auth.shopId === shopId) {
+                    s.emit('shopStatusUpdate', { isOnline: data.isOnline });
+                }
             }
         });
 
@@ -260,12 +272,10 @@ io.on('connection', async (socket) => {
     // 驗證失敗處理
     if (!isVerified) {
         console.log(`[驗證失敗] User: ${userId}`);
-        // 強制轉為訪客
         userId = 'guest_' + Math.random().toString(36).substr(2, 9);
         userName = '訪客';
         socket.emit('forceGuestMode', { userId, userName });
     } else if (!userId) {
-        // 沒有 userId 的情況 (第一次來)
         userId = 'guest_' + Math.random().toString(36).substr(2, 9);
         userName = '訪客';
         socket.emit('forceGuestMode', { userId, userName });
@@ -273,6 +283,9 @@ io.on('connection', async (socket) => {
 
     const roomName = `${shopId}_${userId}`;
     socket.join(roomName);
+
+    // ★★★ 新增：連線時，告訴使用者目前客服狀態 ★★★
+    socket.emit('shopStatusUpdate', { isOnline: shopConfig.isOnline });
 
     // 傳送歷史訊息
     const history = await Message.find({ shopId, userId }).sort({ timestamp: 1 });
@@ -294,10 +307,9 @@ io.on('connection', async (socket) => {
         io.to(roomName).emit('newMessage', msgData);
         io.to(`admin_${shopId}`).emit('updateUserList', msgData);
     });
-    // ★★★ 新增：接收使用者的足跡，並轉發給管理員 ★★★
+
+    // 接收使用者的足跡
     socket.on('pageChange', (data) => {
-        // data = { url, title, image }
-        // 廣播給該商店的管理員
         io.to(`admin_${shopId}`).emit('userPageUpdate', {
             userId: userId,
             ...data
