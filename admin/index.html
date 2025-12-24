@@ -682,11 +682,39 @@
                 `;
             }
 
-            // ★★★ 準備 Cyberbiz 後台連結 ★★★
-            // 我們要把 ID 前面的 "cb_" 去掉，才能拼出正確的後台網址
-            // 例如: cb_39592998 -> 39592998
-            const rawId = userId.replace(/^cb_/, '');
-            const backendUrl = `https://geniusart.cyberbiz.co/admin/members/${rawId}?tab=orders`;
+            // ★★★ 準備後台連結 (動態網域版) ★★★
+            let backendUrl = "javascript:void(0);"; 
+            let linkStyle = "color:#999; cursor:default; text-decoration:none;"; 
+            let linkTitle = "無後台連結";
+
+            // 🟢 判斷 1: Cyberbiz (前綴 cb_)
+            if (userId.startsWith('cb_')) {
+                const rawId = userId.replace(/^cb_/, '');
+                
+                // ★★★ 核心修改：使用傳過來的 shopDomain，如果沒有則用預設值 ★★★
+                // 這樣不管是哪一家店，都會連到他自家的 Cyberbiz 後台
+                const domain = data.shopDomain || "geniusart.cyberbiz.co"; 
+                
+                backendUrl = `https://${domain}/admin/members/${rawId}?tab=orders`;
+                linkStyle = "color:#0084ff; text-decoration:underline; cursor:pointer;";
+                linkTitle = `前往 ${domain} 後台`;
+            }
+            // 🟡 Shopline / Shopify 未來也可以用同樣邏輯擴充
+            else if (userId.startsWith('sl_')) {
+                const rawId = userId.replace(/^sl_/, '');
+                // 假設 Shopline 網址格式 (需確認)
+                backendUrl = `https://admin.shoplineapp.com/customers/${rawId}`; 
+                linkStyle = "color:#00b900; text-decoration:underline; cursor:pointer;";
+                linkTitle = "前往 Shopline 後台";
+            }
+            // 🟠 判斷 3: Shopify (前綴 sp_) -> 未來擴充用
+            else if (userId.startsWith('sp_')) {
+                const rawId = userId.replace(/^sp_/, '');
+                // 假設 Shopify 網址格式
+                backendUrl = `https://admin.shopify.com/store/my-store/customers/${rawId}`;
+                linkStyle = "color:#95bf47; text-decoration:underline; cursor:pointer;";
+                linkTitle = "前往 Shopify 後台";
+            }
 
             // 4. ★★★ 聯絡資訊 (新增地址顯示) ★★★
             const infoHtml = `
@@ -704,8 +732,8 @@
                     </div>
                     
                     <div class="stat-item">
-                        <a href="${backendUrl}" target="_blank" style="text-decoration:none;" title="前往 Cyberbiz 後台查看訂單">
-                            <span class="stat-num" style="color:#0084ff; text-decoration:underline; cursor:pointer;">
+                        <a href="${backendUrl}" target="_blank" style="text-decoration:none;" title="${linkTitle}">
+                            <span class="stat-num" style="${linkStyle}">
                                 ${data.ordersCount || 0}
                             </span>
                         </a>

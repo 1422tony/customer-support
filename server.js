@@ -56,6 +56,10 @@ const UserProfileSchema = new mongoose.Schema({
     shopId: { type: String, required: true },
     userId: { type: String, required: true },
     userName: String,
+    
+    // ★★★ 新增：儲存商店網域 ★★★
+    shopDomain: String, 
+    
     email: String,
     mobile: String,
     
@@ -456,6 +460,10 @@ io.on('connection', async (socket) => {
                 { 
                     $set: {
                         userName: data.userName,
+                        
+                        // ★★★ 新增：寫入商店網域 ★★★
+                        shopDomain: data.shopDomain, 
+                        
                         email: data.email,
                         mobile: data.mobile,
                         
