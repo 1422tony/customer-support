@@ -5,6 +5,9 @@ const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
+// server.js 最上方
+const axios = require('axios');
+const cheerio = require('cheerio');
 // ★ 圖片上傳套件
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
@@ -295,6 +298,54 @@ io.on('connection', async (socket) => {
             await new Message(msgData).save();
             
             io.to(`${shopId}_${data.targetUserId}`).emit('newMessage', msgData);
+        });
+
+        // ★★★ 新增：解析商品網址 (爬蟲) ★★★
+        socket.on('adminScrapeProduct', async (url) => {
+            try {
+                // 1. 偽裝成瀏覽器去請求 (避免被擋)
+                const { data } = await axios.get(url, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+                });
+                
+                // 2. 解析 HTML
+                const $ = cheerio.load(data);
+                
+                // 3. 抓取 Open Graph 資訊 (大部分電商都支援)
+                const title = $('meta[property="og:title"]').attr('content') || $('title').text();
+                const image = $('meta[property="og:image"]').attr('content') || '';
+                
+                // 4. 嘗試抓價格 (Cyberbiz 通常會有特定的 class，或是從 og:description 抓)
+                // 這裡先做個簡單的嘗試，抓不到就留白讓客服填
+                let price = '';
+                // 嘗試抓取常見的價格標籤
+                const priceMeta = $('meta[property="product:price:amount"]').attr('content');
+                if (priceMeta) price = '$' + priceMeta;
+
+                // 回傳給前端預覽
+                socket.emit('productScraped', { title, image, price, url });
+                
+            } catch (err) {
+                console.error("爬蟲失敗:", err.message);
+                socket.emit('scrapeError', '無法自動抓取，請手動輸入資訊');
+            }
+        });
+
+        // ★★★ 修改：發送商品卡片 ★★★
+        socket.on('adminSendProduct', async (productData) => {
+            const msgData = {
+                shopId,
+                userId: productData.targetUserId,
+                userName: 'Admin',
+                text: JSON.stringify(productData), // 把商品資訊轉成 JSON 字串存
+                msgType: 'product', // ★ 新的訊息類型
+                sender: 'admin',
+                timestamp: Date.now()
+            };
+            await new Message(msgData).save();
+            
+            // 廣播給雙方
+            io.to(`${shopId}_${productData.targetUserId}`).emit('newMessage', msgData);
         });
 
         socket.on('adminTyping', (data) => {
