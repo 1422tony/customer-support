@@ -64,6 +64,22 @@
         .cb-msg-img { max-width: 200px; border-radius: 12px; border: 1px solid #eee; cursor: zoom-in; }
         .cb-time { font-size: 11px; color: #aaa; margin: 4px 2px 0; }
 
+        /* ★★★ 商品卡片樣式 (後台顯示用) ★★★ */
+        .bubble.product {
+            padding: 0;
+            background: white;
+            border: 1px solid #ddd;
+            overflow: hidden;
+            width: 240px;
+            border-radius: 12px;
+        }
+        .p-card-img { width: 100%; height: 160px; object-fit: cover; background: #f9f9f9; border-bottom: 1px solid #eee; }
+        .p-card-body { padding: 10px; }
+        .p-card-title { font-size: 14px; font-weight: bold; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color:#333; line-height: 1.4; }
+        .p-card-price { color: #c62828; font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+        .p-card-btn { display: block; width: 100%; padding: 8px 0; background: #0084ff; color: white; text-align: center; text-decoration: none; border-radius: 4px; font-size: 14px; }
+        .p-card-btn:hover { background: #006ec9; }
+
         #typing-status { height: 24px; padding: 0 15px; font-size: 12px; color: #888; display: flex; align-items: center; background: #fff; }
         
         #reply-box { padding: 10px 15px 15px 15px; border-top: 1px solid #eee; background: #fff; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
@@ -244,22 +260,7 @@
         .qr-add-btn { background: #4caf50; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; margin-bottom: 10px; font-weight: bold;}
         .qr-save-btn { background: #0084ff; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; }
 
-        /* ★★★ 商品卡片樣式 (後台顯示用) ★★★ */
-        .bubble.product {
-            padding: 0;
-            background: white;
-            border: 1px solid #ddd;
-            overflow: hidden;
-            width: 240px;
-        }
-        .p-card-img { width: 100%; height: 160px; object-fit: cover; background: #f9f9f9; }
-        .p-card-body { padding: 10px; }
-        .p-card-title { font-size: 14px; font-weight: bold; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color:#333; }
-        .p-card-price { color: #c62828; font-weight: bold; font-size: 16px; margin-bottom: 8px; }
-        .p-card-btn { display: block; width: 100%; padding: 8px 0; background: #0084ff; color: white; text-align: center; text-decoration: none; border-radius: 4px; font-size: 14px; }
-        .p-card-btn:hover { background: #006ec9; }
-
-        /* ★★★ 商品編輯器 Modal ★★★ */
+        /* ★★★ 商品編輯器 Modal 樣式 ★★★ */
         #product-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; }
         .p-editor-card { background: white; width: 90%; max-width: 350px; padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; }
         .p-input-group { display: flex; flex-direction: column; gap: 4px; }
@@ -327,11 +328,12 @@
             <div id="typing-status"></div>
             <div id="reply-box">
                 <button id="quick-reply-btn" onclick="toggleQuickMenu()">☰</button>
+                
                 <button id="product-btn" onclick="openProductModal()" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 5px; margin-right:5px;">🛍️</button>
 
                 <div id="quick-reply-menu">
                     <div id="qr-list">
-                        </div>
+                    </div>
                     <div class="qr-footer">
                         <span class="qr-edit-btn" onclick="openQrEditor()">⚙️ 編輯常用語</span>
                     </div>
@@ -603,6 +605,27 @@
                 closeQrEditor();   // 關閉編輯視窗
                 // alert('常用語已更新！');
             });
+
+            // ★★★ 補上缺少的監聽器：商品抓取成功 ★★★
+            socket.on('productScraped', (data) => {
+                document.getElementById('p-title').value = data.title;
+                document.getElementById('p-img').value = data.image;
+                document.getElementById('p-price').value = data.price;
+                
+                if(data.image) {
+                    const img = document.getElementById('p-preview-img');
+                    img.src = data.image;
+                    img.style.display = 'block';
+                }
+                // 恢復 placeholder
+                document.getElementById('p-title').placeholder = "輸入商品名稱";
+            });
+
+            // ★★★ 補上缺少的監聽器：抓取失敗 ★★★
+            socket.on('scrapeError', (msg) => {
+                alert(msg);
+                document.getElementById('p-title').placeholder = "請手動輸入";
+            });
         }
 
         // --- 輔助函式 ---
@@ -803,6 +826,7 @@
             list.prepend(div); 
         }
 
+        // ★★★ 更新 renderMsg: 支援商品卡片 (msgType='product') ★★★
         function renderMsg(msg) {
             const box = document.getElementById('messages');
             var date = new Date(msg.timestamp);
@@ -812,7 +836,7 @@
             
             let contentHtml = '';
 
-            // ★ 判斷訊息類型
+            // 判斷訊息類型
             if (msg.msgType === 'image') {
                 contentHtml = `<div class="bubble image ${msg.sender}"><img src="${msg.text}" class="cb-msg-img" onclick="showImage(this.src)"></div>`;
             } 
@@ -998,24 +1022,6 @@
             document.getElementById('p-title').placeholder = "抓取中...";
             socket.emit('adminScrapeProduct', url);
         }
-
-        // 接收抓取結果
-        socket.on('productScraped', (data) => {
-            document.getElementById('p-title').value = data.title;
-            document.getElementById('p-img').value = data.image;
-            document.getElementById('p-price').value = data.price;
-            
-            if(data.image) {
-                const img = document.getElementById('p-preview-img');
-                img.src = data.image;
-                img.style.display = 'block';
-            }
-        });
-
-        socket.on('scrapeError', (msg) => {
-            alert(msg);
-            document.getElementById('p-title').placeholder = "請手動輸入";
-        });
 
         // 確認發送
         function sendProductCard() {
