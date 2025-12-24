@@ -638,24 +638,82 @@
 
         // --- 輔助函式 ---
 
-        // ★★★ 渲染資訊卡邏輯 ★★★
+        // ★★★ 渲染資訊卡邏輯 (V26.0 - 穩定版) ★★★
         function renderProfile(userId) {
             const data = userProfiles[userId] || {};
-            const name = document.getElementById('chat-title').innerText; // 從標題抓名字當備案
+            const name = document.getElementById('chat-title').innerText; 
 
+            // 1. 基本頭像與名稱
             document.getElementById('p-avatar').innerText = (data.userName || name || "?")[0].toUpperCase();
             document.getElementById('p-name').innerText = data.userName || name;
             
-            // 狀態燈號
             let statusDot = data.accountStatus === 'enabled' ? '🟢' : '🔴';
             document.getElementById('p-id').innerText = `${statusDot} ID: ${userId}`;
             
-            document.getElementById('p-email').innerText = data.email || "未提供";
-            document.getElementById('p-mobile').innerText = data.mobile || "未提供";
+            // 2. ★★★ 購物車區塊 (簡化版：只顯示總金額) ★★★
+            let cartHtml = '';
+            const cartTotal = parseInt(data.cartTotal || 0);
             
-            // 處理標籤
-            const tagsDiv = document.getElementById('p-tags');
-            tagsDiv.innerHTML = '';
+            if (cartTotal > 0) {
+                // 因為我們為了穩定性暫時移除了詳細清單，所以這裡只顯示總覽
+                cartHtml = `
+                    <div class="cart-section">
+                        <div class="cart-header-bar" style="border-bottom:none; border-radius:8px;">
+                            <span>🛒 購物車未結帳 (${data.cartCount || 0} 件)</span>
+                            <span>$${cartTotal.toLocaleString()}</span>
+                        </div>
+                        <div style="padding:8px; font-size:12px; color:#666; text-align:center; background:#fff;">
+                           💰 潛在訂單金額：$${cartTotal.toLocaleString()}
+                        </div>
+                    </div>
+                `;
+            } else {
+                cartHtml = `<div style="padding:10px; text-align:center; color:#ccc; font-size:12px; border:1px dashed #eee; border-radius:8px; margin-bottom:15px;">🛒 購物車是空的</div>`;
+            }
+
+            // 3. 風險警示區塊
+            const riskScore = parseInt(data.riskScore || 0);
+            let alertHtml = '';
+            if (riskScore > 0) {
+                alertHtml = `
+                    <div style="background:#ffebee; color:#c62828; padding:10px; border-radius:8px; margin-bottom:15px; font-weight:bold; display:flex; align-items:center; gap:5px; border:1px solid #ffcdd2;">
+                        ⚠️ 警告：偵測到 ${riskScore} 次未取貨
+                    </div>
+                `;
+            }
+
+            // 4. ★★★ 聯絡資訊 (新增地址顯示) ★★★
+            const infoHtml = `
+                <div class="data-row">
+                    <div class="data-label">聯絡資訊</div>
+                    <div class="data-value">📧 ${data.email || "--"}</div>
+                    <div class="data-value" style="margin-top:5px;">📱 ${data.mobile || "--"}</div>
+                    <div class="data-value" style="margin-top:5px; line-height:1.4;">📍 ${data.address || "--"}</div>
+                </div>
+                
+                <div class="stat-box">
+                    <div class="stat-item">
+                        <span class="stat-num">$${parseFloat(data.totalSpent || 0).toLocaleString()}</span>
+                        <span class="stat-desc">累積消費</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-num">${data.ordersCount || 0}</span>
+                        <span class="stat-desc">訂單數</span>
+                    </div>
+                </div>
+
+                <div class="data-row">
+                    <div class="data-label">標籤 (Tags)</div>
+                    <div class="data-value" id="p-tags-container"></div>
+                </div>
+            `;
+
+            // 5. 組合 HTML
+            const body = document.querySelector('.profile-body');
+            body.innerHTML = alertHtml + cartHtml + infoHtml;
+
+            // 6. 處理標籤
+            const tagsContainer = document.getElementById('p-tags-container');
             if (data.tags && data.tags.trim() !== '') {
                 data.tags.split(',').forEach(tag => {
                     const span = document.createElement('span');
@@ -663,50 +721,11 @@
                     if(tag.includes('VIP') || tag.includes('黑名單')) span.className += ' vip'; 
                     if(tag.includes('黑名單') || tag.includes('未取貨') || tag.includes('風險')) span.className += ' risk';
                     span.innerText = tag;
-                    tagsDiv.appendChild(span);
+                    tagsContainer.appendChild(span);
                 });
             } else {
-                tagsDiv.innerHTML = '<span style="color:#999;font-style:italic;">無標籤</span>';
+                tagsContainer.innerHTML = '<span style="color:#999;font-style:italic;">無標籤</span>';
             }
-
-            // 3. 消費統計區塊 (修改這裡)
-            let spent = parseFloat(data.totalSpent || 0).toLocaleString();
-            document.getElementById('p-spent').innerText = `$${spent}`;
-            document.getElementById('p-orders').innerText = data.ordersCount || '0';
-            
-            // ★★★ 新增：風險警示區塊 ★★★
-            const riskScore = parseInt(data.riskScore || 0);
-            
-            let alertHtml = '';
-            if (riskScore > 0) {
-                alertHtml = `
-                    <div style="background:#ffebee; color:#c62828; padding:10px; border-radius:8px; margin-bottom:15px; font-weight:bold; display:flex; align-items:center; gap:5px;">
-                        ⚠️ 警告：偵測到 ${riskScore} 次未取貨紀錄
-                    </div>
-                `;
-            }
-            
-            // 把警告插在 "標籤" 上面
-            const tagsRow = document.querySelector('.profile-body .data-row'); // 抓第一個 data-row
-            if(riskScore > 0) {
-                 const oldAlert = document.getElementById('js-risk-alert');
-                 if(oldAlert) oldAlert.remove();
-                 
-                 const alertDiv = document.createElement('div');
-                 alertDiv.id = 'js-risk-alert';
-                 alertDiv.innerHTML = alertHtml;
-                 tagsRow.parentNode.insertBefore(alertDiv, tagsRow);
-            } else {
-                 const oldAlert = document.getElementById('js-risk-alert');
-                 if(oldAlert) oldAlert.remove();
-            }
-
-            // 行銷與登入資訊
-            let marketingIcon = (data.acceptsMarketing === 'true') ? '✅ 願意接收行銷' : '🔕 拒絕行銷';
-            document.getElementById('p-login').innerHTML = `
-                <div>${data.loginType || (userId.startsWith('guest') ? '訪客' : '一般會員')}</div>
-                <div style="margin-top:4px;font-size:12px;color:#666;">${marketingIcon}</div>
-            `;
         }
 
         function toggleProfile() {

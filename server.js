@@ -54,21 +54,21 @@ const MessageSchema = new mongoose.Schema({
 // ★★★ 修改：顧客詳細資料模型 (UserProfile) ★★★
 const UserProfileSchema = new mongoose.Schema({
     shopId: { type: String, required: true },
-    userId: { type: String, required: true }, // 複合索引鍵
+    userId: { type: String, required: true },
     userName: String,
     email: String,
     mobile: String,
-    address: String, // ★ 新增
+    
+    // ★★★ 新增這三行 ★★★
+    address: String,      // 存地址
+    cartTotal: Number,    // 存總金額 (安全數字)
+    cartCount: Number,    // 存總數量 (安全數字)
+    // ------------------
+
     tags: String,
     totalSpent: String,
     ordersCount: String,
     riskScore: { type: Number, default: 0 },
-    
-    // ★ 新增：購物車快照 (不一定要永久保存，但為了重整後能看到，還是存一下)
-    cartTotal: Number,
-    cartCount: Number,
-    cartDetails: String, // 存 JSON 字串
-
     acceptsMarketing: String,
     accountStatus: String,
     loginType: String,
@@ -449,15 +449,22 @@ io.on('connection', async (socket) => {
             userId: userId
         });
 
-        // 2. ★ 存入 MongoDB (UPSERT: 有則更新，無則新增)
+        // 2. ★ 存入 MongoDB
         try {
             await UserProfile.findOneAndUpdate(
-                { shopId: shopId, userId: userId }, // 搜尋條件
+                { shopId: shopId, userId: userId }, 
                 { 
                     $set: {
-                        userName: data.userName, // 確保名字也存進去
+                        userName: data.userName,
                         email: data.email,
                         mobile: data.mobile,
+                        
+                        // ★★★ 新增這三行 (寫入資料庫) ★★★
+                        address: data.address,
+                        cartTotal: data.cartTotal,
+                        cartCount: data.cartCount,
+                        // -----------------------------
+
                         tags: data.tags,
                         totalSpent: data.totalSpent,
                         ordersCount: data.ordersCount,
@@ -468,9 +475,8 @@ io.on('connection', async (socket) => {
                         lastUpdated: new Date()
                     }
                 },
-                { upsert: true, new: true } // 如果沒有就新增
+                { upsert: true, new: true } 
             );
-            // console.log(`[CRM] 已儲存用戶資料: ${userId}`);
         } catch (err) {
             console.error(`[CRM] 儲存失敗: ${err.message}`);
         }
