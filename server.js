@@ -51,17 +51,24 @@ const MessageSchema = new mongoose.Schema({
     isRead: { type: Boolean, default: false } 
 });
 
-// ★★★ 新增：顧客詳細資料模型 (UserProfile) ★★★
+// ★★★ 修改：顧客詳細資料模型 (UserProfile) ★★★
 const UserProfileSchema = new mongoose.Schema({
     shopId: { type: String, required: true },
     userId: { type: String, required: true }, // 複合索引鍵
     userName: String,
     email: String,
     mobile: String,
+    address: String, // ★ 新增
     tags: String,
     totalSpent: String,
     ordersCount: String,
     riskScore: { type: Number, default: 0 },
+    
+    // ★ 新增：購物車快照 (不一定要永久保存，但為了重整後能看到，還是存一下)
+    cartTotal: Number,
+    cartCount: Number,
+    cartDetails: String, // 存 JSON 字串
+
     acceptsMarketing: String,
     accountStatus: String,
     loginType: String,
@@ -451,6 +458,14 @@ io.on('connection', async (socket) => {
                         userName: data.userName, // 確保名字也存進去
                         email: data.email,
                         mobile: data.mobile,
+                        
+                        // ★★★ 新增：地址與購物車資訊 ★★★
+                        address: data.address,
+                        cartTotal: data.cartTotal,
+                        cartCount: data.cartCount,
+                        cartDetails: data.cartDetails,
+                        // ---------------------------------
+
                         tags: data.tags,
                         totalSpent: data.totalSpent,
                         ordersCount: data.ordersCount,
