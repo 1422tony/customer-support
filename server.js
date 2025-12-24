@@ -41,7 +41,10 @@ const MessageSchema = new mongoose.Schema({
     text: String,
     msgType: { type: String, default: 'text' }, 
     sender: String,
-    timestamp: { type: Number, default: Date.now }
+    timestamp: { type: Number, default: Date.now },
+    
+    // ★★★ 新增：已讀狀態 (預設為 false，表示未讀) ★★★
+    isRead: { type: Boolean, default: false } 
 });
 
 const Shop = mongoose.model('Shop', ShopSchema);
@@ -182,21 +185,31 @@ io.on('connection', async (socket) => {
                 console.log(`[管理員登入] ${shop.name}`);
                 socket.join(`admin_${shopId}`);
                 
-                // ★ 回傳 isOnline 狀態給管理員
                 socket.emit('loginSuccess', { 
                     shopName: shop.name,
-                    isOnline: shop.isOnline 
+                    isOnline: shop.isOnline,
+                    shopPlan: shop.plan // 如果有做方案分級
                 });
 
-                // 取得使用者列表
+                // ★★★ 修改：計算每個使用者的未讀數量 ★★★
                 const msgs = await Message.find({ shopId });
                 const users = {};
+                const unreadStats = {}; // { userId: 3, userId2: 5 ... }
+
                 msgs.forEach(m => {
+                    // 只記錄使用者列表
                     if (m.userId && m.sender !== 'admin') {
                         users[m.userId] = m.userName || m.userId;
+                        
+                        // ★ 統計未讀：如果是使用者傳的且未讀
+                        if (m.sender === 'user' && m.isRead === false) {
+                            unreadStats[m.userId] = (unreadStats[m.userId] || 0) + 1;
+                        }
                     }
                 });
-                socket.emit('initUserList', users);
+
+                // 把使用者列表和未讀統計一起傳給前端
+                socket.emit('initUserList', { users, unreadStats });
             } else {
                 socket.emit('loginError', '密碼錯誤');
             }
@@ -217,6 +230,14 @@ io.on('connection', async (socket) => {
         });
 
         socket.on('adminJoinUser', async ({ userId }) => {
+            // ★★★ 當管理員點擊使用者，將該使用者的訊息標示為已讀 ★★★
+            await Message.updateMany(
+                { shopId, userId, sender: 'user', isRead: false },
+                { $set: { isRead: true } }
+            );
+             // ★★★ 通知管理員前端，該使用者的未讀計數歸零 ★★★
+            socket.emit('unreadCountReset', { userId });
+
             const roomName = `${shopId}_${userId}`;
             socket.join(roomName);
             const history = await Message.find({ shopId, userId }).sort({ timestamp: 1 });

@@ -329,11 +329,15 @@
                 socket.disconnect();
             });
 
-            socket.on('initUserList', (users) => {
+            socket.on('initUserList', (data) => {
                 const list = document.getElementById('user-list');
                 list.innerHTML = '';
-                unreadCounts = {}; 
-                Object.keys(users).forEach(uid => renderUserInList(uid, users[uid]));
+                unreadCounts = data.unreadStats || {}; // ★ 載入伺服器算好的未讀數
+                
+                // data.users 是物件 { uid: name, ... }
+                Object.keys(data.users).forEach(uid => {
+                    renderUserInList(uid, data.users[uid]);
+                });
             });
 
             // ★★★ 接收使用者 Profile 更新 ★★★
@@ -362,16 +366,20 @@
             socket.on('updateUserList', (msg) => {
                 const userId = msg.userId;
                 let userRow = document.querySelector(`.user-row[data-id="${userId}"]`);
+                
                 if (!userRow) {
                     renderUserInList(userId, msg.userName);
                     userRow = document.querySelector(`.user-row[data-id="${userId}"]`);
                 } else {
                     const list = document.getElementById('user-list');
-                    list.prepend(userRow);
+                    list.prepend(userRow); // 把有新訊息的人移到最上面
                 }
+
+                // 如果現在不是正在跟這個人聊天，且訊息是 user 發的
                 if (activeUser !== userId && msg.sender !== 'admin') {
                     if (!unreadCounts[userId]) unreadCounts[userId] = 0;
-                    unreadCounts[userId]++;
+                    unreadCounts[userId]++; // 累加
+                    
                     const badge = userRow.querySelector('.unread-badge');
                     badge.innerText = unreadCounts[userId] > 99 ? '99+' : unreadCounts[userId];
                     badge.style.display = 'inline-block';
@@ -575,15 +583,25 @@
             const div = document.createElement('div');
             div.className = 'user-row';
             div.setAttribute('data-id', uid);
+            
+            // ★ 檢查這個人有沒有未讀 (從全域變數 unreadCounts 拿)
+            const count = unreadCounts[uid] || 0;
+            const badgeDisplay = count > 0 ? 'inline-block' : 'none';
+            const badgeText = count > 99 ? '99+' : count;
+
             div.innerHTML = `
                 <div style="display:flex; flex-direction:column;">
                     <span style="font-weight:500; font-size:16px;">${name}</span>
                     <span style="font-size:12px;color:#999; margin-top:4px;">${uid}</span>
                 </div>
-                <span class="unread-badge">0</span>
+                <span class="unread-badge" style="display:${badgeDisplay}">${badgeText}</span>
             `;
+            
             div.onclick = () => selectUser(uid, name);
+            
             const list = document.getElementById('user-list');
+            // 為了讓有未讀的人排在上面，可以用 prepend
+            // 但如果您希望照時間排，這裡可能要調整，目前維持 prepend (最新的人在最上)
             list.prepend(div); 
         }
 
