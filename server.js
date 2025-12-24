@@ -301,33 +301,51 @@ io.on('connection', async (socket) => {
         });
 
         // ★★★ 新增：解析商品網址 (爬蟲) ★★★
+// ★★★ 修改：解析商品網址 (加入 timeout 防呆) ★★★
         socket.on('adminScrapeProduct', async (url) => {
+            console.log(`[爬蟲] 開始抓取: ${url}`); // 加個 Log 方便看進度
             try {
-                // 1. 偽裝成瀏覽器去請求 (避免被擋)
+                // 1. 偽裝成瀏覽器 + 設定 5秒超時 (timeout: 5000)
                 const { data } = await axios.get(url, {
-                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+                    headers: { 
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+                    },
+                    timeout: 5000 // ★ 關鍵：超過 5 秒就報錯，不要空等
                 });
                 
                 // 2. 解析 HTML
                 const $ = cheerio.load(data);
                 
-                // 3. 抓取 Open Graph 資訊 (大部分電商都支援)
-                const title = $('meta[property="og:title"]').attr('content') || $('title').text();
+                // 3. 抓取 Open Graph 資訊
+                const title = $('meta[property="og:title"]').attr('content') || $('title').text() || '未命名商品';
                 const image = $('meta[property="og:image"]').attr('content') || '';
                 
-                // 4. 嘗試抓價格 (Cyberbiz 通常會有特定的 class，或是從 og:description 抓)
-                // 這裡先做個簡單的嘗試，抓不到就留白讓客服填
+                // 4. 嘗試抓價格
                 let price = '';
-                // 嘗試抓取常見的價格標籤
                 const priceMeta = $('meta[property="product:price:amount"]').attr('content');
-                if (priceMeta) price = '$' + priceMeta;
+                const currencyMeta = $('meta[property="product:price:currency"]').attr('content') || 'NT$';
+                
+                if (priceMeta) {
+                    price = `${currencyMeta} ${priceMeta}`;
+                } else {
+                    // 備案：如果抓不到 meta，試著抓常見的價格 class (針對 Cyberbiz)
+                    // 您可以觀察 Cyberbiz 前台的價格 class 名稱，例如 .price, .sales-price
+                    price = $('.price').first().text().trim() || ''; 
+                }
 
-                // 回傳給前端預覽
+                console.log(`[爬蟲] 成功: ${title}`);
                 socket.emit('productScraped', { title, image, price, url });
                 
             } catch (err) {
-                console.error("爬蟲失敗:", err.message);
-                socket.emit('scrapeError', '無法自動抓取，請手動輸入資訊');
+                console.error(`[爬蟲失敗] 原因: ${err.message}`);
+                
+                // 判斷錯誤類型回傳不同訊息
+                let errorMsg = '無法自動抓取，請手動輸入';
+                if (err.code === 'ECONNABORTED') errorMsg = '連線逾時 (超過5秒)，請手動輸入';
+                if (err.response && err.response.status === 403) errorMsg = '網站阻擋了爬蟲，請手動輸入';
+                
+                socket.emit('scrapeError', errorMsg);
             }
         });
 
