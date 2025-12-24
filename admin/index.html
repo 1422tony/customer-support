@@ -578,14 +578,19 @@
                     
                     if (items.length > 0) {
                         items.forEach(item => {
+                            // ★★★ 修改重點：配合瘦身版的變數名稱 (t, v, p, q, i) ★★★
+                            // 1. 補上 https: 前綴 (因為 Liquid 只傳了 //cdn...)
+                            let imgUrl = item.i ? ('https:' + item.i) : '/icon/no-image.png';
+                            
+                            // 2. 讀取縮寫變數 (t=標題, v=規格, q=數量, p=價格)
                             itemsListHtml += `
                                 <div class="cart-item-row">
-                                    <img src="${item.image || '/icon/no-image.png'}" class="c-item-img">
+                                    <img src="${imgUrl}" class="c-item-img">
                                     <div class="c-item-info">
-                                        <div class="c-item-title" title="${item.title}">${item.title}</div>
-                                        <div class="c-item-meta">${item.variant || '單一規格'} x ${item.quantity}</div>
+                                        <div class="c-item-title" title="${item.t}">${item.t}</div>
+                                        <div class="c-item-meta">${item.v || '單一規格'} x ${item.q}</div>
                                     </div>
-                                    <div class="c-item-price">$${item.price}</div>
+                                    <div class="c-item-price">$${item.p}</div>
                                 </div>
                             `;
                         });
@@ -595,6 +600,7 @@
                 } catch(e) {
                     itemsListHtml = '<div style="padding:10px;text-align:center;color:#999;font-size:12px;">清單格式錯誤</div>';
                 }
+
 
                 cartHtml = `
                     <div class="cart-section">
