@@ -682,6 +682,12 @@
                 `;
             }
 
+            // ★★★ 準備 Cyberbiz 後台連結 ★★★
+            // 我們要把 ID 前面的 "cb_" 去掉，才能拼出正確的後台網址
+            // 例如: cb_39592998 -> 39592998
+            const rawId = userId.replace(/^cb_/, '');
+            const backendUrl = `https://geniusart.cyberbiz.co/admin/members/${rawId}?tab=orders`;
+
             // 4. ★★★ 聯絡資訊 (新增地址顯示) ★★★
             const infoHtml = `
                 <div class="data-row">
@@ -696,9 +702,14 @@
                         <span class="stat-num">$${parseFloat(data.totalSpent || 0).toLocaleString()}</span>
                         <span class="stat-desc">累積消費</span>
                     </div>
+                    
                     <div class="stat-item">
-                        <span class="stat-num">${data.ordersCount || 0}</span>
-                        <span class="stat-desc">訂單數</span>
+                        <a href="${backendUrl}" target="_blank" style="text-decoration:none;" title="前往 Cyberbiz 後台查看訂單">
+                            <span class="stat-num" style="color:#0084ff; text-decoration:underline; cursor:pointer;">
+                                ${data.ordersCount || 0}
+                            </span>
+                        </a>
+                        <span class="stat-desc">訂單數 🔗</span>
                     </div>
                 </div>
 
