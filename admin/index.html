@@ -73,7 +73,7 @@
             width: 240px;
             border-radius: 12px;
         }
-        .p-card-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #f9f9f9; border-bottom: 1px solid #eee; }
+        .p-card-img { width: 100%; height: 210px; object-fit: cover; background: #f9f9f9; border-bottom: 1px solid #eee; }
         .p-card-body { padding: 10px; }
         .p-card-title { font-size: 14px; font-weight: bold; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color:#333; line-height: 1.4; }
         .p-card-price { color: #c62828; font-weight: bold; font-size: 16px; margin-bottom: 8px; }
@@ -140,50 +140,6 @@
 
         #status-text { font-size: 12px; color: #888; margin-right: 10px; }
         
-        /* ★★★ 新增：購物車捲動視窗樣式 ★★★ */
-        .cart-section {
-            background: #f9f9f9;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            overflow: hidden;
-        }
-        .cart-header-bar {
-            padding: 8px 12px;
-            background: #e3f2fd;
-            color: #0d47a1;
-            font-weight: bold;
-            font-size: 13px;
-            border-bottom: 1px solid #bbdefb;
-            display: flex;
-            justify-content: space-between;
-        }
-        .cart-scroll-area {
-            max-height: 180px; /* ★ 設定高度，超過會出現捲軸 ★ */
-            overflow-y: auto;
-            padding: 5px;
-        }
-        .cart-item-row {
-            display: flex;
-            align-items: center;
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-            background: white;
-        }
-        .cart-item-row:last-child { border-bottom: none; }
-        .c-item-img {
-            width: 40px;
-            height: 40px;
-            object-fit: cover;
-            border-radius: 4px;
-            border: 1px solid #eee;
-            margin-right: 10px;
-        }
-        .c-item-info { flex: 1; overflow: hidden; }
-        .c-item-title { font-size: 13px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500;}
-        .c-item-meta { font-size: 11px; color: #888; margin-top: 2px;}
-        .c-item-price { font-weight: bold; color: #e67e22; font-size: 13px; }
-
         /* ★★★ 新增：手機版資訊卡返回按鈕樣式 ★★★ */
         #profile-back-btn { 
             display: none; 
@@ -200,9 +156,13 @@
         }
 
         @media (max-width: 768px) {
+            /* 響應式：手機版覆蓋整個畫面 */
             #profile-sidebar.open { position: absolute; top: 0; right: 0; width: 100%; height: 100%; z-index: 20; }
             #close-profile-btn { display: block; position: absolute; top: 10px; right: 10px; font-size: 24px; cursor: pointer; padding: 10px; }
+            
+            /* ★ 手機版顯示返回按鈕 */
             #profile-back-btn { display: block; }
+
             #dashboard { display: block; }
             #sidebar { width: 100%; position: absolute; top: 0; left: 0; display: flex; }
             #chat-main { width: 100%; position: absolute; top: 0; left: 0; transform: translateX(100%); transition: transform 0.3s ease-in-out; z-index: 10; }
@@ -216,17 +176,79 @@
         #close-profile-btn { display: none; }
 
         /* ★★★ 常用回復漢堡選單 (UI優化版) ★★★ */
-        #quick-reply-btn { font-size: 24px; cursor: pointer; color: #555; padding: 5px 10px; margin-right: 5px; background: none; border: none; transition: color 0.2s; }
+        #quick-reply-btn {
+            font-size: 24px;
+            cursor: pointer;
+            color: #555;
+            padding: 5px 10px;
+            margin-right: 5px;
+            background: none;
+            border: none;
+            transition: color 0.2s;
+        }
         #quick-reply-btn:hover { color: #0084ff; }
-        #quick-reply-menu { display: none; position: absolute; bottom: 70px; left: 15px; width: 280px; max-height: 400px; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 1px solid #eee; z-index: 100; overflow: hidden; animation: slideUp 0.2s ease-out; display: flex; flex-direction: column; }
+
+        /* 選單容器 (向上彈出) */
+        #quick-reply-menu {
+            display: none;
+            position: absolute;
+            bottom: 70px; /* 在輸入框上方 */
+            left: 15px;
+            width: 280px; /* 稍微加寬 */
+            max-height: 400px; /* 限制高度 */
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 1px solid #eee;
+            z-index: 100;
+            overflow: hidden;
+            animation: slideUp 0.2s ease-out;
+            display: flex;
+            flex-direction: column;
+        }
         @keyframes slideUp { from {transform: translateY(10px); opacity:0;} to {transform: translateY(0); opacity:1;} }
-        #qr-list { padding: 10px; overflow-y: auto; flex: 1; }
-        .qr-item { padding: 10px 14px; margin-bottom: 8px; background: #0084ff; color: #ffffff; border-radius: 16px; cursor: pointer; font-size: 14px; line-height: 1.4; transition: all 0.2s; word-break: break-word; }
-        .qr-item:hover { background: #bbdefb; transform: translateX(2px); }
-        .qr-item:active { transform: scale(0.98); }
+
+        #qr-list {
+            padding: 10px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        /* ★ 氣泡樣式的常用語 */
+        .qr-item {
+            padding: 10px 14px;
+            margin-bottom: 8px; /* 間距 */
+            background: #0084ff; /* 背景 */
+            color: #ffffff;     /* 文字 */
+            border-radius: 16px; /* 圓角氣泡 */
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1.4;
+            transition: all 0.2s;
+            word-break: break-word;
+        }
+        .qr-item:hover { 
+            background: #bbdefb; /* hover 變深一點 */
+            transform: translateX(2px); /* 小小位移 */
+        }
+        .qr-item:active {
+            transform: scale(0.98);
+        }
         .qr-item:last-child { margin-bottom: 0; }
-        .qr-footer { padding: 10px; background: #fafafa; border-top: 1px solid #eee; text-align: center; }
-        .qr-edit-btn { font-size: 12px; color: #666; cursor: pointer; text-decoration: underline; }
+        
+        /* 編輯按鈕列 */
+        .qr-footer {
+            padding: 10px;
+            background: #fafafa;
+            border-top: 1px solid #eee;
+            text-align: center;
+        }
+        .qr-edit-btn {
+            font-size: 12px;
+            color: #666;
+            cursor: pointer;
+            text-decoration: underline;
+        }
 
         /* ★★★ 編輯常用語的 Modal ★★★ */
         #qr-editor-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; }
@@ -244,7 +266,15 @@
         .p-input-group { display: flex; flex-direction: column; gap: 4px; }
         .p-input-group label { font-size: 12px; color: #666; font-weight: bold; }
         .p-input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-        .p-preview-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 4px; border: 1px solid #eee; display: none; margin-top: 5px; }
+        .p-preview-img { 
+            width: 100%; /* height: 200px;  <-- 移除原本的固定高度 */
+            aspect-ratio: 1 / 1; /* ★★★ 新增：強制長寬比 1:1 (正方形) ★★★ */    
+            object-fit: cover;   /* 確保圖片填滿正方形且不變形 */
+            border-radius: 4px; 
+            border: 1px solid #eee; 
+            display: none; 
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -336,7 +366,34 @@
             </div>
 
             <div class="profile-body">
-                <div style="text-align:center; color:#999; margin-top:20px;">載入中...</div>
+                <div class="stat-box">
+                    <div class="stat-item">
+                        <span class="stat-num" id="p-spent">$0</span>
+                        <span class="stat-desc">累積消費</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-num" id="p-orders">0</span>
+                        <span class="stat-desc">訂單數</span>
+                    </div>
+                </div>
+
+                <div class="data-row">
+                    <div class="data-label">標籤 (Tags)</div>
+                    <div class="data-value" id="p-tags">
+                        <span style="color:#999;font-style:italic;">無標籤</span>
+                    </div>
+                </div>
+
+                <div class="data-row">
+                    <div class="data-label">聯絡資訊</div>
+                    <div class="data-value">📧 <span id="p-email">--</span></div>
+                    <div class="data-value" style="margin-top:5px;">📱 <span id="p-mobile">--</span></div>
+                </div>
+
+                <div class="data-row">
+                    <div class="data-label">登入方式</div>
+                    <div class="data-value" id="p-login">訪客</div>
+                </div>
             </div>
         </div>
     </div>
@@ -399,7 +456,9 @@
         let typingTimeout;    
         let userFootprints = {}; 
 
-        let quickReplies = []; 
+        let quickReplies = []; // 儲存目前的常用語列表
+
+        // ★ 儲存每個使用者的詳細資料
         let userProfiles = {}; 
 
         window.onload = function() {
@@ -412,17 +471,20 @@
             }
         };
 
+        // --- 核心連線邏輯 (修正版) ---
         function login() {
             const shop = document.getElementById('l_shop').value.trim();
             const pass = document.getElementById('l_pass').value.trim();
             if(!shop || !pass) { alert("請輸入帳號密碼"); return; }
             if(socket) socket.disconnect();
 
+            // 1. 初始化 Socket
             socket = io(SERVER, {
                 auth: { shopId: shop, isAdmin: true },
                 transports: ['websocket', 'polling']
             });
 
+            // 2. 綁定所有事件監聽器 (必須在 socket 初始化之後)
             socket.on('connect', () => {
                 socket.emit('adminLogin', { password: pass });
             });
@@ -435,9 +497,11 @@
                 dash.style.display = (window.innerWidth <= 768) ? 'block' : 'flex';
                 document.getElementById('shop-name').innerText = data.shopName;
                 
+                // 更新狀態開關
                 const toggle = document.getElementById('online-toggle');
                 toggle.checked = data.isOnline;
                 
+                // ★ 新增這行：
                 quickReplies = data.quickReplies || []; 
                 updateStatusText(data.isOnline);
             });
@@ -448,20 +512,27 @@
                 socket.disconnect();
             });
 
+            // admin/index.html 內的 socket.on('initUserList')
             socket.on('initUserList', (data) => {
                 const users = data.users || {}; 
                 unreadCounts = data.unreadStats || {}; 
+                
+                // ★★★ 接收伺服器傳來的所有 CRM 資料 ★★★
+                // 這樣即使顧客離線，資料也會存在這裡
                 if (data.userProfiles) {
                     userProfiles = data.userProfiles;
                 }
+
                 const list = document.getElementById('user-list');
                 list.innerHTML = '';
+                
                 Object.keys(users).forEach(uid => renderUserInList(uid, users[uid]));
             });
-
+            // ★ 新增：接收後端傳來的「歸零」指令
             socket.on('unreadCountReset', (data) => {
                 if(unreadCounts[data.userId]) {
                     unreadCounts[data.userId] = 0;
+                    // 找到該列並隱藏紅點
                     const row = document.querySelector(`.user-row[data-id="${data.userId}"]`);
                     if(row) {
                         const badge = row.querySelector('.unread-badge');
@@ -470,13 +541,15 @@
                 }
             });
 
+            // ★★★ 接收使用者 Profile 更新 ★★★
             socket.on('userProfileUpdate', (data) => {
-                userProfiles[data.userId] = data; 
+                userProfiles[data.userId] = data; // 存起來
                 if (activeUser === data.userId) {
-                    renderProfile(data.userId); 
+                    renderProfile(data.userId); // 如果正在看他，馬上更新介面
                 }
             });
 
+            // 足跡更新
             socket.on('userPageUpdate', (data) => {
                 userFootprints[data.userId] = data;
                 if (activeUser === data.userId) {
@@ -484,6 +557,7 @@
                 }
             });
 
+            // 客服狀態更新 (同步用)
             socket.on('shopStatusUpdate', (data) => {
                 const toggle = document.getElementById('online-toggle');
                 toggle.checked = data.isOnline;
@@ -499,12 +573,13 @@
                     userRow = document.querySelector(`.user-row[data-id="${userId}"]`);
                 } else {
                     const list = document.getElementById('user-list');
-                    list.prepend(userRow); 
+                    list.prepend(userRow); // 把有新訊息的人移到最上面
                 }
 
+                // 如果現在不是正在跟這個人聊天，且訊息是 user 發的
                 if (activeUser !== userId && msg.sender !== 'admin') {
                     if (!unreadCounts[userId]) unreadCounts[userId] = 0;
-                    unreadCounts[userId]++; 
+                    unreadCounts[userId]++; // 累加
                     
                     const badge = userRow.querySelector('.unread-badge');
                     badge.innerText = unreadCounts[userId] > 99 ? '99+' : unreadCounts[userId];
@@ -534,130 +609,53 @@
 
             socket.on('quickRepliesUpdated', (replies) => {
                 quickReplies = replies;
-                renderQuickMenu(); 
-                closeQrEditor(); 
+                renderQuickMenu(); // 更新選單畫面
+                closeQrEditor();   // 關閉編輯視窗
+                // alert('常用語已更新！');
             });
 
+            // ★★★ 補上缺少的監聽器：商品抓取成功 ★★★
             socket.on('productScraped', (data) => {
                 document.getElementById('p-title').value = data.title;
                 document.getElementById('p-img').value = data.image;
                 document.getElementById('p-price').value = data.price;
+                
                 if(data.image) {
                     const img = document.getElementById('p-preview-img');
                     img.src = data.image;
                     img.style.display = 'block';
                 }
+                // 恢復 placeholder
                 document.getElementById('p-title').placeholder = "輸入商品名稱";
             });
 
+            // ★★★ 補上缺少的監聽器：抓取失敗 ★★★
             socket.on('scrapeError', (msg) => {
                 alert(msg);
                 document.getElementById('p-title').placeholder = "請手動輸入";
             });
         }
 
-        // ★★★ 渲染資訊卡邏輯 (升級版：含購物車與地址) ★★★
+        // --- 輔助函式 ---
+
+        // ★★★ 渲染資訊卡邏輯 ★★★
         function renderProfile(userId) {
             const data = userProfiles[userId] || {};
-            const name = document.getElementById('chat-title').innerText; 
+            const name = document.getElementById('chat-title').innerText; // 從標題抓名字當備案
 
             document.getElementById('p-avatar').innerText = (data.userName || name || "?")[0].toUpperCase();
             document.getElementById('p-name').innerText = data.userName || name;
             
+            // 狀態燈號
             let statusDot = data.accountStatus === 'enabled' ? '🟢' : '🔴';
             document.getElementById('p-id').innerText = `${statusDot} ID: ${userId}`;
             
-            // ★★★ 新增：購物車區塊 (可捲動) ★★★
-            let cartHtml = '';
-            const cartTotal = parseInt(data.cartTotal || 0);
+            document.getElementById('p-email').innerText = data.email || "未提供";
+            document.getElementById('p-mobile').innerText = data.mobile || "未提供";
             
-            if (cartTotal > 0) {
-                let itemsListHtml = '';
-                try {
-                    const items = JSON.parse(data.cartDetails || "[]");
-                    
-                    if (items.length > 0) {
-                        items.forEach(item => {
-                            // ★★★ 修改重點：配合瘦身版的變數名稱 (t, v, p, q, i) ★★★
-                            // 1. 補上 https: 前綴 (因為 Liquid 只傳了 //cdn...)
-                            let imgUrl = item.i ? ('https:' + item.i) : '/icon/no-image.png';
-                            
-                            // 2. 讀取縮寫變數 (t=標題, v=規格, q=數量, p=價格)
-                            itemsListHtml += `
-                                <div class="cart-item-row">
-                                    <img src="${imgUrl}" class="c-item-img">
-                                    <div class="c-item-info">
-                                        <div class="c-item-title" title="${item.t}">${item.t}</div>
-                                        <div class="c-item-meta">${item.v || '單一規格'} x ${item.q}</div>
-                                    </div>
-                                    <div class="c-item-price">$${item.p}</div>
-                                </div>
-                            `;
-                        });
-                    } else {
-                        itemsListHtml = '<div style="padding:10px;text-align:center;color:#999;font-size:12px;">無法解析商品列表</div>';
-                    }
-                } catch(e) {
-                    itemsListHtml = '<div style="padding:10px;text-align:center;color:#999;font-size:12px;">清單格式錯誤</div>';
-                }
-
-
-                cartHtml = `
-                    <div class="cart-section">
-                        <div class="cart-header-bar">
-                            <span>🛒 購物車未結帳 (${data.cartCount || 0})</span>
-                            <span>$${cartTotal.toLocaleString()}</span>
-                        </div>
-                        <div class="cart-scroll-area">
-                            ${itemsListHtml}
-                        </div>
-                    </div>
-                `;
-            } else {
-                cartHtml = `<div style="padding:10px; text-align:center; color:#ccc; font-size:12px; border:1px dashed #eee; border-radius:8px; margin-bottom:15px;">🛒 購物車是空的</div>`;
-            }
-
-            // ★★★ 風險警示區塊 ★★★
-            const riskScore = parseInt(data.riskScore || 0);
-            let alertHtml = '';
-            if (riskScore > 0) {
-                alertHtml = `
-                    <div style="background:#ffebee; color:#c62828; padding:10px; border-radius:8px; margin-bottom:15px; font-weight:bold; display:flex; align-items:center; gap:5px; border:1px solid #ffcdd2;">
-                        ⚠️ 警告：偵測到 ${riskScore} 次未取貨
-                    </div>
-                `;
-            }
-
-            // 組合基本資訊
-            const infoHtml = `
-                <div class="data-row">
-                    <div class="data-label">聯絡資訊</div>
-                    <div class="data-value">📧 ${data.email || "--"}</div>
-                    <div class="data-value" style="margin-top:5px;">📱 ${data.mobile || "--"}</div>
-                    <div class="data-value" style="margin-top:5px;">📍 ${data.address || "--"}</div>
-                </div>
-                
-                <div class="stat-box">
-                    <div class="stat-item">
-                        <span class="stat-num">$${parseFloat(data.totalSpent || 0).toLocaleString()}</span>
-                        <span class="stat-desc">累積消費</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-num">${data.ordersCount || 0}</span>
-                        <span class="stat-desc">訂單數</span>
-                    </div>
-                </div>
-
-                <div class="data-row">
-                    <div class="data-label">標籤 (Tags)</div>
-                    <div class="data-value" id="p-tags-container"></div>
-                </div>
-            `;
-
-            const body = document.querySelector('.profile-body');
-            body.innerHTML = alertHtml + cartHtml + infoHtml;
-
-            const tagsContainer = document.getElementById('p-tags-container');
+            // 處理標籤
+            const tagsDiv = document.getElementById('p-tags');
+            tagsDiv.innerHTML = '';
             if (data.tags && data.tags.trim() !== '') {
                 data.tags.split(',').forEach(tag => {
                     const span = document.createElement('span');
@@ -665,11 +663,50 @@
                     if(tag.includes('VIP') || tag.includes('黑名單')) span.className += ' vip'; 
                     if(tag.includes('黑名單') || tag.includes('未取貨') || tag.includes('風險')) span.className += ' risk';
                     span.innerText = tag;
-                    tagsContainer.appendChild(span);
+                    tagsDiv.appendChild(span);
                 });
             } else {
-                tagsContainer.innerHTML = '<span style="color:#999;font-style:italic;">無標籤</span>';
+                tagsDiv.innerHTML = '<span style="color:#999;font-style:italic;">無標籤</span>';
             }
+
+            // 3. 消費統計區塊 (修改這裡)
+            let spent = parseFloat(data.totalSpent || 0).toLocaleString();
+            document.getElementById('p-spent').innerText = `$${spent}`;
+            document.getElementById('p-orders').innerText = data.ordersCount || '0';
+            
+            // ★★★ 新增：風險警示區塊 ★★★
+            const riskScore = parseInt(data.riskScore || 0);
+            
+            let alertHtml = '';
+            if (riskScore > 0) {
+                alertHtml = `
+                    <div style="background:#ffebee; color:#c62828; padding:10px; border-radius:8px; margin-bottom:15px; font-weight:bold; display:flex; align-items:center; gap:5px;">
+                        ⚠️ 警告：偵測到 ${riskScore} 次未取貨紀錄
+                    </div>
+                `;
+            }
+            
+            // 把警告插在 "標籤" 上面
+            const tagsRow = document.querySelector('.profile-body .data-row'); // 抓第一個 data-row
+            if(riskScore > 0) {
+                 const oldAlert = document.getElementById('js-risk-alert');
+                 if(oldAlert) oldAlert.remove();
+                 
+                 const alertDiv = document.createElement('div');
+                 alertDiv.id = 'js-risk-alert';
+                 alertDiv.innerHTML = alertHtml;
+                 tagsRow.parentNode.insertBefore(alertDiv, tagsRow);
+            } else {
+                 const oldAlert = document.getElementById('js-risk-alert');
+                 if(oldAlert) oldAlert.remove();
+            }
+
+            // 行銷與登入資訊
+            let marketingIcon = (data.acceptsMarketing === 'true') ? '✅ 願意接收行銷' : '🔕 拒絕行銷';
+            document.getElementById('p-login').innerHTML = `
+                <div>${data.loginType || (userId.startsWith('guest') ? '訪客' : '一般會員')}</div>
+                <div style="margin-top:4px;font-size:12px;color:#666;">${marketingIcon}</div>
+            `;
         }
 
         function toggleProfile() {
@@ -677,8 +714,10 @@
             sidebar.classList.toggle('open');
         }
 
+        // 切換使用者時
         function selectUser(uid, name) {
             activeUser = uid;
+            
             document.querySelectorAll('.user-row').forEach(e => e.classList.remove('active'));
             document.querySelector(`.user-row[data-id="${uid}"]`).classList.add('active');
             
@@ -697,6 +736,7 @@
         }
 
         function toggleOnline() {
+            // 防呆：確保 socket 存在
             if (!socket) return; 
             const toggle = document.getElementById('online-toggle');
             const isOnline = toggle.checked;
@@ -772,6 +812,8 @@
             const div = document.createElement('div');
             div.className = 'user-row';
             div.setAttribute('data-id', uid);
+            
+            // ★ 檢查這個人有沒有未讀 (從全域變數 unreadCounts 拿)
             const count = unreadCounts[uid] || 0;
             const badgeDisplay = count > 0 ? 'inline-block' : 'none';
             const badgeText = count > 99 ? '99+' : count;
@@ -783,11 +825,16 @@
                 </div>
                 <span class="unread-badge" style="display:${badgeDisplay}">${badgeText}</span>
             `;
+            
             div.onclick = () => selectUser(uid, name);
+            
             const list = document.getElementById('user-list');
+            // 為了讓有未讀的人排在上面，可以用 prepend
+            // 但如果您希望照時間排，這裡可能要調整，目前維持 prepend (最新的人在最上)
             list.prepend(div); 
         }
 
+        // ★★★ 更新 renderMsg: 支援商品卡片 (msgType='product') ★★★
         function renderMsg(msg) {
             const box = document.getElementById('messages');
             var date = new Date(msg.timestamp);
@@ -796,10 +843,13 @@
             row.className = `cb-msg-row ${msg.sender}`;
             
             let contentHtml = '';
+
+            // 判斷訊息類型
             if (msg.msgType === 'image') {
                 contentHtml = `<div class="bubble image ${msg.sender}"><img src="${msg.text}" class="cb-msg-img" onclick="showImage(this.src)"></div>`;
             } 
             else if (msg.msgType === 'product') {
+                // ★ 解析 JSON 資料
                 let p = {};
                 try { p = JSON.parse(msg.text); } catch(e){}
                 
@@ -825,6 +875,7 @@
 
         const input = document.getElementById('reply-input');
         function sendTextMsg() {
+            // 防呆：確保 socket 存在且 activeUser 存在
             if (socket && activeUser && input.value.trim() !== '') {
                 socket.emit('adminSendMessage', { targetUserId: activeUser, text: input.value, msgType: 'text' });
                 socket.emit('adminTyping', { targetUserId: activeUser, isTyping: false });
@@ -863,25 +914,31 @@
             finally { input.placeholder = "輸入訊息..."; input.disabled = false; fileInput.value = ''; }
         };
 
+        // --- UI 操作函式 ---
+
         function toggleQuickMenu() {
             const menu = document.getElementById('quick-reply-menu');
             if (menu.style.display === 'flex') {
                 menu.style.display = 'none';
             } else {
-                renderQuickMenu(); 
-                menu.style.display = 'flex'; 
+                renderQuickMenu(); // 每次打開都重繪
+                menu.style.display = 'flex'; // 用 flex 讓它直向排列
             }
         }
 
+        // ★★★ 修改：點擊後直接發送 (One-click Send) ★★★
         function useQuickReply(text) {
+            // 防呆
             if (socket && activeUser) {
                 socket.emit('adminSendMessage', { targetUserId: activeUser, text: text, msgType: 'text' });
+                // 關閉選單
                 document.getElementById('quick-reply-menu').style.display = 'none';
             } else {
                 alert("請先選擇使用者");
             }
         }
 
+        // 渲染選單 (聊天室的小選單)
         function renderQuickMenu() {
             const list = document.getElementById('qr-list');
             list.innerHTML = '';
@@ -893,22 +950,26 @@
                 const div = document.createElement('div');
                 div.className = 'qr-item';
                 div.innerText = text;
-                div.onclick = () => useQuickReply(text); 
+                div.onclick = () => useQuickReply(text); // 綁定一鍵發送
                 list.appendChild(div);
             });
         }
 
+        // 點擊其他地方關閉選單
         document.addEventListener('click', function(event) {
             const menu = document.getElementById('quick-reply-menu');
             const btn = document.getElementById('quick-reply-btn');
+            // 如果點擊的不是按鈕也不是選單本身，就關閉
             if (menu && btn && !btn.contains(event.target) && !menu.contains(event.target)) {
                 menu.style.display = 'none';
             }
         });
 
+        // --- 編輯器邏輯 ---
+
         function openQrEditor() {
-            document.getElementById('quick-reply-menu').style.display = 'none'; 
-            document.getElementById('qr-editor-modal').style.display = 'flex';  
+            document.getElementById('quick-reply-menu').style.display = 'none'; // 關閉小選單
+            document.getElementById('qr-editor-modal').style.display = 'flex';  // 打開大編輯器
             
             const container = document.getElementById('qr-edit-list');
             container.innerHTML = '';
@@ -934,17 +995,22 @@
         }
 
         function saveQrChanges() {
+            // 蒐集所有輸入框的內容
             const inputs = document.querySelectorAll('.qr-edit-row .qr-input');
             const newReplies = Array.from(inputs)
                 .map(input => input.value.trim())
                 .filter(text => text !== '');
 
+            // 發送給 Server 儲存
             socket.emit('adminUpdateQuickReplies', newReplies);
         }
+
+        // --- 商品卡片邏輯 ---
 
         function openProductModal() {
             if(!activeUser) { alert("請先選擇使用者"); return; }
             document.getElementById('product-modal').style.display = 'flex';
+            // 清空欄位
             document.getElementById('p-url').value = '';
             document.getElementById('p-img').value = '';
             document.getElementById('p-title').value = '';
@@ -956,13 +1022,16 @@
             document.getElementById('product-modal').style.display = 'none';
         }
 
+        // 自動抓取
         function autoScrape() {
             const url = document.getElementById('p-url').value.trim();
             if(!url) return;
+            // 顯示 Loading
             document.getElementById('p-title').placeholder = "抓取中...";
             socket.emit('adminScrapeProduct', url);
         }
 
+        // 確認發送
         function sendProductCard() {
             const url = document.getElementById('p-url').value;
             const image = document.getElementById('p-img').value;

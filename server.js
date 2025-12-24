@@ -458,14 +458,6 @@ io.on('connection', async (socket) => {
                         userName: data.userName, // 確保名字也存進去
                         email: data.email,
                         mobile: data.mobile,
-                        
-                        // ★★★ 新增：地址與購物車資訊 ★★★
-                        address: data.address,
-                        cartTotal: data.cartTotal,
-                        cartCount: data.cartCount,
-                        cartDetails: data.cartDetails,
-                        // ---------------------------------
-
                         tags: data.tags,
                         totalSpent: data.totalSpent,
                         ordersCount: data.ordersCount,
