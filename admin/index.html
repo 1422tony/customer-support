@@ -329,15 +329,30 @@
                 socket.disconnect();
             });
 
+            // admin/index.html 內的 socket.on('initUserList')
             socket.on('initUserList', (data) => {
+                // ★ 修正：資料結構變了，要解構出來
+                // 如果 Server 傳的是 { users, unreadStats }
+                // 這裡要判斷一下相容性
+                const users = data.users || data; 
+                unreadCounts = data.unreadStats || {}; 
+                
                 const list = document.getElementById('user-list');
                 list.innerHTML = '';
-                unreadCounts = data.unreadStats || {}; // ★ 載入伺服器算好的未讀數
                 
-                // data.users 是物件 { uid: name, ... }
-                Object.keys(data.users).forEach(uid => {
-                    renderUserInList(uid, data.users[uid]);
-                });
+                Object.keys(users).forEach(uid => renderUserInList(uid, users[uid]));
+            });
+            // ★ 新增：接收後端傳來的「歸零」指令
+            socket.on('unreadCountReset', (data) => {
+                if(unreadCounts[data.userId]) {
+                    unreadCounts[data.userId] = 0;
+                    // 找到該列並隱藏紅點
+                    const row = document.querySelector(`.user-row[data-id="${data.userId}"]`);
+                    if(row) {
+                        const badge = row.querySelector('.unread-badge');
+                        if(badge) badge.style.display = 'none';
+                    }
+                }
             });
 
             // ★★★ 接收使用者 Profile 更新 ★★★

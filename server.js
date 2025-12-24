@@ -228,14 +228,16 @@ io.on('connection', async (socket) => {
                 }
             }
         });
-
         socket.on('adminJoinUser', async ({ userId }) => {
-            // ★★★ 當管理員點擊使用者，將該使用者的訊息標示為已讀 ★★★
-            await Message.updateMany(
-                { shopId, userId, sender: 'user', isRead: false },
+            // ★★★ 修正版：使用 $ne: true 來確保能更新到舊資料 ★★★
+            const result = await Message.updateMany(
+                { shopId, userId, sender: 'user', isRead: { $ne: true } }, 
                 { $set: { isRead: true } }
             );
-             // ★★★ 通知管理員前端，該使用者的未讀計數歸零 ★★★
+            
+            console.log(`[系統] 用戶 ${userId} 已讀更新。影響筆數: ${result.modifiedCount}`); // 加這行方便在 Render Logs 查看有沒有成功
+
+            // 通知前端歸零
             socket.emit('unreadCountReset', { userId });
 
             const roomName = `${shopId}_${userId}`;
