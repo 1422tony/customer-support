@@ -158,6 +158,71 @@
             #footprint-link { max-width: 200px; }
         }
         #close-profile-btn { display: none; }
+
+        /* ★★★ 常用回復漢堡選單 ★★★ */
+        #quick-reply-btn {
+            font-size: 24px;
+            cursor: pointer;
+            color: #555;
+            padding: 5px 10px;
+            margin-right: 5px;
+            background: none;
+            border: none;
+            transition: color 0.2s;
+        }
+        #quick-reply-btn:hover { color: #0084ff; }
+
+        /* 選單容器 (向上彈出) */
+        #quick-reply-menu {
+            display: none;
+            position: absolute;
+            bottom: 70px; /* 在輸入框上方 */
+            left: 15px;
+            width: 250px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            border: 1px solid #eee;
+            z-index: 100;
+            overflow: hidden;
+            animation: slideUp 0.2s ease-out;
+        }
+        @keyframes slideUp { from {transform: translateY(10px); opacity:0;} to {transform: translateY(0); opacity:1;} }
+
+        .qr-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f5f5f5;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+            transition: background 0.1s;
+        }
+        .qr-item:hover { background: #f0f7ff; color: #0084ff; }
+        .qr-item:last-child { border-bottom: none; }
+        
+        /* 編輯按鈕列 */
+        .qr-footer {
+            padding: 10px;
+            background: #fafafa;
+            border-top: 1px solid #eee;
+            text-align: center;
+        }
+        .qr-edit-btn {
+            font-size: 12px;
+            color: #666;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        /* ★★★ 編輯常用語的 Modal ★★★ */
+        #qr-editor-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; }
+        .qr-editor-card { background: white; width: 90%; max-width: 400px; padding: 20px; border-radius: 10px; display: flex; flex-direction: column; max-height: 80vh; }
+        .qr-list-container { flex: 1; overflow-y: auto; margin: 15px 0; border: 1px solid #eee; padding: 10px; border-radius: 4px; }
+        .qr-edit-row { display: flex; gap: 5px; margin-bottom: 8px; }
+        .qr-input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .qr-del-btn { background: #ff5252; color: white; border: none; padding: 0 10px; border-radius: 4px; cursor: pointer; }
+        .qr-add-btn { background: #4caf50; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; margin-bottom: 10px; font-weight: bold;}
+        .qr-save-btn { background: #0084ff; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -218,6 +283,16 @@
             <div id="messages"></div>
             <div id="typing-status"></div>
             <div id="reply-box">
+                <button id="quick-reply-btn" onclick="toggleQuickMenu()">☰</button>
+                
+                <div id="quick-reply-menu">
+                    <div id="qr-list">
+                        </div>
+                    <div class="qr-footer">
+                        <span class="qr-edit-btn" onclick="openQrEditor()">⚙️ 編輯常用語</span>
+                    </div>
+                </div>
+
                 <label for="file-input" id="upload-btn">📷</label>
                 <input type="file" id="file-input" accept="image/*">
                 <input type="text" id="reply-input" placeholder="輸入訊息..." disabled>
@@ -269,6 +344,19 @@
         </div>
     </div>
 
+    <div id="qr-editor-modal">
+        <div class="qr-editor-card">
+            <h3 style="margin:0 0 10px 0;">編輯常用回復</h3>
+            <button class="qr-add-btn" onclick="addQrRow()">+ 新增一句</button>
+            <div class="qr-list-container" id="qr-edit-list">
+                </div>
+            <div style="display:flex; gap:10px;">
+                <button style="flex:1; padding:12px; background:#ddd; border:none; border-radius:4px; cursor:pointer;" onclick="closeQrEditor()">取消</button>
+                <button style="flex:1;" class="qr-save-btn" onclick="saveQrChanges()">儲存設定</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         const SERVER = '/'; 
@@ -277,6 +365,8 @@
         let unreadCounts = {}; 
         let typingTimeout;    
         let userFootprints = {}; 
+
+        let quickReplies = []; // 儲存目前的常用語列表
 
         // ★ 儲存每個使用者的詳細資料
         let userProfiles = {}; 
@@ -320,6 +410,9 @@
                 // 更新狀態開關
                 const toggle = document.getElementById('online-toggle');
                 toggle.checked = data.isOnline;
+                
+                // ★ 新增這行：
+                quickReplies = data.quickReplies || []; 
                 updateStatusText(data.isOnline);
             });
 
@@ -422,6 +515,13 @@
                 if (activeUser && data.userId === activeUser) {
                     updateTypingStatus(data.isTyping);
                 }
+            });
+
+            socket.on('quickRepliesUpdated', (replies) => {
+                quickReplies = replies;
+                renderQuickMenu(); // 更新選單畫面
+                closeQrEditor();   // 關閉編輯視窗
+                // alert('常用語已更新！');
             });
         }
 
@@ -682,6 +782,93 @@
             } catch (err) { alert("上傳失敗"); } 
             finally { input.placeholder = "輸入訊息..."; input.disabled = false; fileInput.value = ''; }
         };
+
+        // --- UI 操作函式 ---
+
+        function toggleQuickMenu() {
+            const menu = document.getElementById('quick-reply-menu');
+            if (menu.style.display === 'block') {
+                menu.style.display = 'none';
+            } else {
+                renderQuickMenu(); // 每次打開都重繪
+                menu.style.display = 'block';
+            }
+        }
+
+        // 點擊選單項目 -> 填入輸入框
+        function useQuickReply(text) {
+            const input = document.getElementById('reply-input');
+            input.value = text; // 填入
+            input.focus();      // 讓游標跳過去
+            document.getElementById('quick-reply-menu').style.display = 'none'; // 關閉選單
+        }
+
+        // 渲染選單 (聊天室的小選單)
+        function renderQuickMenu() {
+            const list = document.getElementById('qr-list');
+            list.innerHTML = '';
+            if (quickReplies.length === 0) {
+                list.innerHTML = '<div class="qr-item" style="color:#999; cursor:default;">(尚無常用語)</div>';
+                return;
+            }
+            quickReplies.forEach(text => {
+                const div = document.createElement('div');
+                div.className = 'qr-item';
+                div.innerText = text;
+                div.onclick = () => useQuickReply(text);
+                list.appendChild(div);
+            });
+        }
+
+        // 點擊其他地方關閉選單
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('quick-reply-menu');
+            const btn = document.getElementById('quick-reply-btn');
+            // 如果點擊的不是按鈕也不是選單本身，就關閉
+            if (menu && btn && !btn.contains(event.target) && !menu.contains(event.target)) {
+                menu.style.display = 'none';
+            }
+        });
+
+        // --- 編輯器邏輯 ---
+
+        function openQrEditor() {
+            document.getElementById('quick-reply-menu').style.display = 'none'; // 關閉小選單
+            document.getElementById('qr-editor-modal').style.display = 'flex';  // 打開大編輯器
+            
+            const container = document.getElementById('qr-edit-list');
+            container.innerHTML = '';
+            quickReplies.forEach(text => {
+                addQrRow(text);
+            });
+        }
+
+        function closeQrEditor() {
+            document.getElementById('qr-editor-modal').style.display = 'none';
+        }
+
+        function addQrRow(value = '') {
+            const container = document.getElementById('qr-edit-list');
+            const row = document.createElement('div');
+            row.className = 'qr-edit-row';
+            const escapedValue = value.replace(/"/g, '&quot;');
+            row.innerHTML = `
+                <input type="text" class="qr-input" value="${escapedValue}" placeholder="輸入常用回復內容...">
+                <button class="qr-del-btn" onclick="this.parentElement.remove()">✕</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function saveQrChanges() {
+            // 蒐集所有輸入框的內容
+            const inputs = document.querySelectorAll('.qr-edit-row .qr-input');
+            const newReplies = Array.from(inputs)
+                .map(input => input.value.trim())
+                .filter(text => text !== '');
+
+            // 發送給 Server 儲存
+            socket.emit('adminUpdateQuickReplies', newReplies);
+        }
     </script>
 </body>
 </html>

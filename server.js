@@ -31,7 +31,10 @@ const ShopSchema = new mongoose.Schema({
     secretKey: String, 
     publicToken: String,
     verificationType: { type: String, default: 'token' },
-    isOnline: { type: Boolean, default: true }
+    isOnline: { type: Boolean, default: true },
+    
+    // ★★★ 新增：儲存常用回復 (字串陣列) ★★★
+    quickReplies: { type: [String], default: [] } 
 });
 
 const MessageSchema = new mongoose.Schema({
@@ -143,7 +146,16 @@ async function initDefaultShop() {
                 name: '天才美術社 (Cyberbiz)',
                 publicToken: 'genius_0201_token_888',
                 verificationType: 'token',
-                secretKey: "my_super_secret_key_2025" 
+                secretKey: "my_super_secret_key_2025",
+                
+                // ★ 給一點預設值
+                quickReplies: [
+                    "您好，請問有什麼能幫您的嗎？",
+                    "目前商品都有現貨，可以直接下單喔！",
+                    "我們的營業時間是早上9點到晚上10點。",
+                    "不好意思，目前客服忙碌中，請稍候。",
+                    "好的，沒問題！"
+                ]
             }
         },
         { upsert: true }
@@ -199,7 +211,10 @@ io.on('connection', async (socket) => {
                 socket.emit('loginSuccess', { 
                     shopName: shop.name,
                     isOnline: shop.isOnline,
-                    shopPlan: shop.plan
+                    shopPlan: shop.plan,
+                    
+                    // ★★★ 把常用語傳給前端 ★★★
+                    quickReplies: shop.quickReplies || []
                 });
 
                 // 1. 取得訊息與未讀統計
@@ -230,6 +245,15 @@ io.on('connection', async (socket) => {
             } else {
                 socket.emit('loginError', '密碼錯誤');
             }
+        });
+
+        // ★★★ 新增：更新常用回復 ★★★
+        socket.on('adminUpdateQuickReplies', async (replies) => {
+            // replies 是一個字串陣列 ["你好", "謝謝"]
+            await Shop.updateOne({ shopId }, { quickReplies: replies });
+            
+            // 更新成功後，把最新的列表傳回給前端確認
+            socket.emit('quickRepliesUpdated', replies);
         });
 
         socket.on('adminToggleStatus', async (data) => {
