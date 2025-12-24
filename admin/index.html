@@ -331,12 +331,15 @@
 
             // admin/index.html 內的 socket.on('initUserList')
             socket.on('initUserList', (data) => {
-                // ★ 修正：資料結構變了，要解構出來
-                // 如果 Server 傳的是 { users, unreadStats }
-                // 這裡要判斷一下相容性
-                const users = data.users || data; 
+                const users = data.users || {}; 
                 unreadCounts = data.unreadStats || {}; 
                 
+                // ★★★ 接收伺服器傳來的所有 CRM 資料 ★★★
+                // 這樣即使顧客離線，資料也會存在這裡
+                if (data.userProfiles) {
+                    userProfiles = data.userProfiles;
+                }
+
                 const list = document.getElementById('user-list');
                 list.innerHTML = '';
                 

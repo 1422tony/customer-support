@@ -31,7 +31,7 @@ const ShopSchema = new mongoose.Schema({
     secretKey: String, 
     publicToken: String,
     verificationType: { type: String, default: 'token' },
-    isOnline: { type: Boolean, default: true } // ★ 狀態預設上線
+    isOnline: { type: Boolean, default: true }
 });
 
 const MessageSchema = new mongoose.Schema({
@@ -42,13 +42,32 @@ const MessageSchema = new mongoose.Schema({
     msgType: { type: String, default: 'text' }, 
     sender: String,
     timestamp: { type: Number, default: Date.now },
-    
-    // ★★★ 新增：已讀狀態 (預設為 false，表示未讀) ★★★
     isRead: { type: Boolean, default: false } 
 });
 
+// ★★★ 新增：顧客詳細資料模型 (UserProfile) ★★★
+const UserProfileSchema = new mongoose.Schema({
+    shopId: { type: String, required: true },
+    userId: { type: String, required: true }, // 複合索引鍵
+    userName: String,
+    email: String,
+    mobile: String,
+    tags: String,
+    totalSpent: String,
+    ordersCount: String,
+    riskScore: { type: Number, default: 0 },
+    acceptsMarketing: String,
+    accountStatus: String,
+    loginType: String,
+    lastUpdated: { type: Date, default: Date.now }
+});
+// 建立複合索引，確保同一商店同一用戶只有一筆資料
+UserProfileSchema.index({ shopId: 1, userId: 1 }, { unique: true });
+
 const Shop = mongoose.model('Shop', ShopSchema);
 const Message = mongoose.model('Message', MessageSchema);
+// ★ 註冊 UserProfile 模型
+const UserProfile = mongoose.model('UserProfile', UserProfileSchema);
 
 // --- 3. 圖片上傳設定 (Cloudinary) ---
 cloudinary.config({
@@ -98,30 +117,23 @@ const io = new Server(server, {
 // --- 驗證邏輯 ---
 function verifyIdentity(shopConfig, authData) {
     const { token, signature, userId } = authData;
-
-    // 1. 如果資料庫還沒設定 secretKey，降級檢查 Token
     if (!shopConfig.secretKey) {
         return String(token).trim() === String(shopConfig.publicToken).trim();
     }
-
-    // 2. 如果有傳簽章，進行 HMAC 驗證
     if (signature) {
         const payload = String(userId); 
         const expectedSig = crypto
             .createHmac('sha256', shopConfig.secretKey)
             .update(payload)
             .digest('hex');
-
         console.log(`[驗證] User: ${userId} | Client: ${signature} | Server: ${expectedSig}`);
         return expectedSig === signature;
     }
-    
     return false;
 }
 
 // --- 初始化預設商店 ---
 async function initDefaultShop() {
-    // 1. 原本的 Cyberbiz 商店
     const defaultId = 'genius_0201';
     await Shop.updateOne(
         { shopId: defaultId },
@@ -138,7 +150,6 @@ async function initDefaultShop() {
     );
     console.log(`[系統] 商店檢查/更新完成: ${defaultId}`);
 
-    // 2. 測試用商店
     const testId = 'test';
     await Shop.updateOne(
         { shopId: testId },
@@ -188,39 +199,41 @@ io.on('connection', async (socket) => {
                 socket.emit('loginSuccess', { 
                     shopName: shop.name,
                     isOnline: shop.isOnline,
-                    shopPlan: shop.plan // 如果有做方案分級
+                    shopPlan: shop.plan
                 });
 
-                // ★★★ 修改：計算每個使用者的未讀數量 ★★★
+                // 1. 取得訊息與未讀統計
                 const msgs = await Message.find({ shopId });
                 const users = {};
-                const unreadStats = {}; // { userId: 3, userId2: 5 ... }
+                const unreadStats = {}; 
 
                 msgs.forEach(m => {
-                    // 只記錄使用者列表
                     if (m.userId && m.sender !== 'admin') {
                         users[m.userId] = m.userName || m.userId;
-                        
-                        // ★ 統計未讀：如果是使用者傳的且未讀
                         if (m.sender === 'user' && m.isRead === false) {
                             unreadStats[m.userId] = (unreadStats[m.userId] || 0) + 1;
                         }
                     }
                 });
 
-                // 把使用者列表和未讀統計一起傳給前端
-                socket.emit('initUserList', { users, unreadStats });
+                // 2. ★★★ 取得所有已儲存的顧客資料 (UserProfile) ★★★
+                const profiles = await UserProfile.find({ shopId });
+                // 轉成 Map 格式方便前端使用: { userId: profileObj, ... }
+                const profileMap = {};
+                profiles.forEach(p => {
+                    profileMap[p.userId] = p;
+                });
+
+                // 3. 一併傳給前端 (users, unreadStats, userProfiles)
+                socket.emit('initUserList', { users, unreadStats, userProfiles: profileMap });
+
             } else {
                 socket.emit('loginError', '密碼錯誤');
             }
         });
 
-        // ★★★ 新增：管理員切換上下線狀態 ★★★
         socket.on('adminToggleStatus', async (data) => {
-            // data = { isOnline: true/false }
             await Shop.updateOne({ shopId }, { isOnline: data.isOnline });
-            
-            // 廣播給所有連上這個 shop 的 socket (包含管理員自己和前台客戶)
             const sockets = await io.fetchSockets();
             for (const s of sockets) {
                 if (s.handshake.auth.shopId === shopId) {
@@ -228,16 +241,15 @@ io.on('connection', async (socket) => {
                 }
             }
         });
+
         socket.on('adminJoinUser', async ({ userId }) => {
-            // ★★★ 修正版：使用 $ne: true 來確保能更新到舊資料 ★★★
+            // 更新未讀狀態
             const result = await Message.updateMany(
                 { shopId, userId, sender: 'user', isRead: { $ne: true } }, 
                 { $set: { isRead: true } }
             );
-            
-            console.log(`[系統] 用戶 ${userId} 已讀更新。影響筆數: ${result.modifiedCount}`); // 加這行方便在 Render Logs 查看有沒有成功
+            console.log(`[系統] 用戶 ${userId} 已讀更新筆數: ${result.modifiedCount}`); 
 
-            // 通知前端歸零
             socket.emit('unreadCountReset', { userId });
 
             const roomName = `${shopId}_${userId}`;
@@ -269,7 +281,7 @@ io.on('connection', async (socket) => {
             });
         });
 
-        return; // 管理員邏輯結束
+        return; 
     }
 
     // ==========================================
@@ -285,20 +297,13 @@ io.on('connection', async (socket) => {
     let { userId, userName } = auth;
     let isVerified = false;
     
-    // 如果是訪客(guest_開頭)，跳過 HMAC 驗證
     if (userId && !userId.startsWith('guest_')) {
         isVerified = verifyIdentity(shopConfig, auth);
     } else if (userId && userId.startsWith('guest_')) {
-        isVerified = true; // 訪客模式直接通過
+        isVerified = true; 
     }
 
-    // 驗證失敗處理
-    if (!isVerified) {
-        console.log(`[驗證失敗] User: ${userId}`);
-        userId = 'guest_' + Math.random().toString(36).substr(2, 9);
-        userName = '訪客';
-        socket.emit('forceGuestMode', { userId, userName });
-    } else if (!userId) {
+    if (!isVerified || !userId) {
         userId = 'guest_' + Math.random().toString(36).substr(2, 9);
         userName = '訪客';
         socket.emit('forceGuestMode', { userId, userName });
@@ -307,14 +312,11 @@ io.on('connection', async (socket) => {
     const roomName = `${shopId}_${userId}`;
     socket.join(roomName);
 
-    // ★★★ 新增：連線時，告訴使用者目前客服狀態 ★★★
     socket.emit('shopStatusUpdate', { isOnline: shopConfig.isOnline });
 
-    // 傳送歷史訊息
     const history = await Message.find({ shopId, userId }).sort({ timestamp: 1 });
     socket.emit('history', history);
 
-    // 接收訊息
     socket.on('sendMessage', async (data) => {
         const msgData = {
             shopId,
@@ -331,7 +333,6 @@ io.on('connection', async (socket) => {
         io.to(`admin_${shopId}`).emit('updateUserList', msgData);
     });
 
-    // 接收使用者的足跡
     socket.on('pageChange', (data) => {
         io.to(`admin_${shopId}`).emit('userPageUpdate', {
             userId: userId,
@@ -339,16 +340,40 @@ io.on('connection', async (socket) => {
         });
     });
 
-    // ★★★ 新增：接收使用者的 CRM 資料 ★★★
-    socket.on('updateUserProfile', (data) => {
-        // data 包含 email, tags, totalSpent 等
-        // 廣播給該商店的管理員
+    // ★★★ 新增：接收並「儲存」使用者的 CRM 資料 ★★★
+    socket.on('updateUserProfile', async (data) => {
+        // 1. 廣播給該商店的管理員 (即時顯示用)
         io.to(`admin_${shopId}`).emit('userProfileUpdate', {
-            userId: userId, // 確保有 userId 才能對應
+            userId: userId, 
             ...data,
-            // The userId from the data object is overridden to ensure it's the authenticated one
             userId: userId
         });
+
+        // 2. ★ 存入 MongoDB (UPSERT: 有則更新，無則新增)
+        try {
+            await UserProfile.findOneAndUpdate(
+                { shopId: shopId, userId: userId }, // 搜尋條件
+                { 
+                    $set: {
+                        userName: data.userName, // 確保名字也存進去
+                        email: data.email,
+                        mobile: data.mobile,
+                        tags: data.tags,
+                        totalSpent: data.totalSpent,
+                        ordersCount: data.ordersCount,
+                        riskScore: data.riskScore,
+                        acceptsMarketing: data.acceptsMarketing,
+                        accountStatus: data.accountStatus,
+                        loginType: data.loginType,
+                        lastUpdated: new Date()
+                    }
+                },
+                { upsert: true, new: true } // 如果沒有就新增
+            );
+            // console.log(`[CRM] 已儲存用戶資料: ${userId}`);
+        } catch (err) {
+            console.error(`[CRM] 儲存失敗: ${err.message}`);
+        }
     });
 
     socket.on('typing', (data) => {
