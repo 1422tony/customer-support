@@ -41,7 +41,12 @@
             .cb-msg.admin { background: #e4e6eb; color: #050505; border-bottom-left-radius: 4px; }
             .cb-msg.image { background: transparent !important; padding: 0; }
             .cb-msg-img { max-width: 150px; border-radius: 8px; cursor: zoom-in; border: 2px solid #ddd; }
-            .cb-time { font-size: 10px; color: #999; margin-top: 2px; margin-left: 4px; margin-right: 4px; }
+            .cb-time { font-size: 10px; color: #999; }
+            .read-status { font-size: 10px; color: #999; }
+            .read-status.read { color: #0084ff; font-weight: bold; }
+            .cb-details { display: flex; align-items: center; margin-top: 4px; gap: 8px; }
+            .cb-msg-row.user .cb-details { justify-content: flex-end; }
+            .cb-msg-row.admin .cb-details { justify-content: flex-start; }
 
             /* ★★★ 修改重點 1：新增商品卡片 CSS ★★★ */
             .cb-msg.product { 
@@ -323,8 +328,7 @@
             if (msg.sender === 'user') { // 注意：Widget 端，使用者是 'user'
                 const readText = msg.isRead ? '已讀' : '送達';
                 const readClass = msg.isRead ? 'read' : '';
-                // 加個小樣式讓它靠右
-                readHtml = `<div class="read-status ${readClass}" style="font-size:10px;color:#999;text-align:right;margin-top:-2px;">${readText}</div>`;
+                readHtml = `<div class="read-status ${readClass}">${readText}</div>`;
             }
 
             let contentHtml = '';
@@ -354,8 +358,15 @@
             else {
                 contentHtml = `<div class="cb-msg ${msg.sender}">${msg.text}</div>`;
             }
+            
+            const detailsHtml = `
+                <div class="cb-details">
+                    ${readHtml}
+                    <div class="cb-time">${timeStr}</div>
+                </div>
+            `;
 
-            row.innerHTML = `${contentHtml}<div class="cb-time">${timeStr}</div>${readHtml}`;
+            row.innerHTML = `${contentHtml}${detailsHtml}`;
             list.appendChild(row);
             list.scrollTop = list.scrollHeight;
         }

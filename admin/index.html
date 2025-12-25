@@ -62,10 +62,12 @@
         .bubble.user { background: #f1f1f1; color: #333; border-bottom-left-radius: 4px; }
         .bubble.image { background: transparent !important; padding: 0; box-shadow: none; }
         .cb-msg-img { max-width: 200px; border-radius: 12px; border: 1px solid #eee; cursor: zoom-in; }
-        .cb-time { font-size: 11px; color: #aaa; margin: 4px 2px 0; }
-
-        .read-status { font-size: 10px; color: #999; text-align: right; margin-top: -2px; height: 14px; }
-        .read-status.read { color: #0084ff; font-weight: bold; } /* 已讀變藍色 */
+        .cb-time { font-size: 11px; color: #aaa; }
+        .read-status { font-size: 10px; color: #999; }
+        .read-status.read { color: #0084ff; font-weight: bold; }
+        .cb-details { display: flex; align-items: center; margin-top: 4px; gap: 8px; }
+        .cb-msg-row.admin .cb-details { justify-content: flex-end; }
+        .cb-msg-row.user .cb-details { justify-content: flex-start; }
 
         /* ★★★ 商品卡片樣式 (後台顯示用) ★★★ */
         .bubble.product {
@@ -971,7 +973,14 @@
                 contentHtml = `<div class="bubble ${msg.sender}">${msg.text}</div>`;
             }
 
-            row.innerHTML = `${contentHtml}<div class="cb-time">${timeStr}</div>${readHtml}`;
+            const detailsHtml = `
+                <div class="cb-details">
+                    ${readHtml}
+                    <div class="cb-time">${timeStr}</div>
+                </div>
+            `;
+
+            row.innerHTML = `${contentHtml}${detailsHtml}`;
             box.appendChild(row);
             box.scrollTop = box.scrollHeight;
         }
