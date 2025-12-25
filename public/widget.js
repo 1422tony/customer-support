@@ -1,6 +1,9 @@
 (function() {
     console.log(">>> Widget.js (v13.3 支援商品卡片版) 啟動...");
 
+    // ★ 步驟 1：將 socket 宣告在最外層，讓 toggle 函式可以取用
+    var socket;
+
     function renderUI() {
         if (document.getElementById('cb-container')) return;
 
@@ -171,6 +174,11 @@
             box.style.display = isHidden ? 'flex' : 'none'; 
             
             if (isHidden) {
+                // ★ 步驟 2：使用者「點開」時才發送已讀
+                if (socket && userId) {
+                    socket.emit('markMessagesRead', { targetUserId: userId, reader: 'user' });
+                }
+
                 var list = document.getElementById('cb-list');
                 if (list) {
                     setTimeout(function() {
@@ -214,7 +222,8 @@
     
     script.onload = function() {
         var SERVER_URL = 'https://customer-support-xtpx.onrender.com';
-        var socket = io(SERVER_URL, {
+        // ★ 步驟 1 (續)：這裡不要用 var 或 let，直接賦值給外層的 socket
+        socket = io(SERVER_URL, {
             auth: { shopId, token, userId, userName, signature, isAdmin: false },
             transports: ['websocket', 'polling'], 
         });
@@ -225,8 +234,7 @@
             if(list) list.innerHTML = ''; 
             if(btn) btn.style.borderColor = '#00ff00';
 
-            // ★★★ 1. 只要連線(打開視窗)，就告訴 Server 我(user)已讀了客服的訊息
-            socket.emit('markMessagesRead', { targetUserId: userId, reader: 'user' });
+            // ★★★ 步驟 3：移除這裡的 emit ★★★
 
             // 1. 傳送 CRM 資料
             if (config.userProfile) {
@@ -357,15 +365,7 @@
             if(list) { list.innerHTML=''; msgs.forEach(addMsg); }
         });
         
-        socket.on('newMessage', function(msg) {
-            addMsg(msg); // 原本的渲染
-
-            // ★★★ 新增這一段：收到客服訊息，立刻告訴 Server 我已讀了 ★★★
-            if (msg.sender === 'admin') {
-                // targetUserId 當然就是我自己 (userId)
-                socket.emit('markMessagesRead', { targetUserId: userId, reader: 'user' });
-            }
-        });
+        socket.on('newMessage', addMsg);
 
         var typingTimeout;
         socket.on('displayTyping', function(data) {
