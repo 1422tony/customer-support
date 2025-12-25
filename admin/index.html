@@ -604,6 +604,11 @@
                 if (activeUser === msg.userId) {
                     renderMsg(msg);
                     updateTypingStatus(false);
+
+                    // ★★★ 新增這一段：如果我正在跟這個人聊天，收到新訊息就馬上標記已讀 ★★★
+                    if (msg.sender === 'user') {
+                        socket.emit('markMessagesRead', { targetUserId: activeUser, reader: 'admin' });
+                    }
                 }
             });
 

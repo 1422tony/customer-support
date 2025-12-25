@@ -357,7 +357,15 @@
             if(list) { list.innerHTML=''; msgs.forEach(addMsg); }
         });
         
-        socket.on('newMessage', addMsg);
+        socket.on('newMessage', function(msg) {
+            addMsg(msg); // 原本的渲染
+
+            // ★★★ 新增這一段：收到客服訊息，立刻告訴 Server 我已讀了 ★★★
+            if (msg.sender === 'admin') {
+                // targetUserId 當然就是我自己 (userId)
+                socket.emit('markMessagesRead', { targetUserId: userId, reader: 'user' });
+            }
+        });
 
         var typingTimeout;
         socket.on('displayTyping', function(data) {
