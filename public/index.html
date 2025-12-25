@@ -7,7 +7,7 @@
     <meta property="og:title" content="頂級開發者機械鍵盤 (測試商品)">
     <meta property="og:image" content="https://placehold.co/600x400/0084ff/ffffff?text=Keyboard+Product">
     
-    <title>客服系統測試頁面 (HMAC版)</title>
+    <title>客服系統測試頁面 (V28.0 模擬環境)</title>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
         .container { max-width: 800px; margin: 50px auto; padding: 30px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
@@ -23,6 +23,10 @@
         /* 提示區塊 */
         .notice { background: #fff3cd; color: #856404; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; border: 1px solid #ffeeba; line-height: 1.5; }
         code { background: #f8f9fa; padding: 2px 5px; border-radius: 3px; color: #e83e8c; font-family: monospace; }
+        
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; background: #f1f1f1; padding: 15px; border-radius: 8px;}
+        .info-item { font-size: 13px; color: #555; }
+        .info-item span { font-weight: bold; color: #333; }
     </style>
 </head>
 <body>
@@ -32,56 +36,102 @@
         
         <div class="notice">
             <strong>⚠️ 開發者注意：</strong><br>
-            此頁面包含 JavaScript 模擬後端 HMAC 加密，方便您測試連線。<br>
+            此頁面模擬 <strong>V28.0 穩定版</strong> 的運作邏輯。<br>
+            包含：SessionStorage 傳遞商品、UserProfile 傳遞地址與購物車金額。<br>
             請確認下方的 <code>secretKey</code> 與您 <code>server.js</code> 內的設定一致！
         </div>
 
-        <p>商店 ID：<code>test</code> | 使用者：<code>user_sim_001</code></p>
-        
         <div class="product-card">
             <img src="https://placehold.co/600x400/0084ff/ffffff?text=Keyboard+Product" class="product-img" alt="商品圖">
             
             <div>
                 <h3 style="margin: 0 0 10px 0;">頂級開發者機械鍵盤</h3>
-                <p style="margin: 0 0 15px 0;">這是一個模擬商品頁，Widget 會自動抓取標題與圖片傳回後台。</p>
+                <p style="margin: 0 0 15px 0;">這是一個模擬商品頁，Widget 會自動抓取標題傳回後台 (不含圖片)。</p>
                 <p style="color: #e74c3c; font-weight: bold; font-size: 1.2em;">$4,999</p>
-                <button class="btn">加入購物車</button>
+                <button class="btn" onclick="alert('這只是模擬頁面，請觀察右下角 Widget')">加入購物車</button>
             </div>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-item"><span>模擬 ID：</span> cb_user_sim_001</div>
+            <div class="info-item"><span>模擬地址：</span> 520 彰化縣 田中鎮 測試路123號</div>
+            <div class="info-item"><span>模擬金額：</span> $4,999</div>
+            <div class="info-item"><span>模擬網域：</span> geniusart.cyberbiz.co</div>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
     <script>
-        // --- 模擬 Liquid 變數 ---
+        // --- 模擬環境參數 ---
         var shopId = "test";
         var token = "9999"; 
-        var userId = "user_sim_001";
+        var customerId = "user_sim_001"; // 原始 ID
+        var userId = "cb_" + customerId; // 加上前綴後的 ID
         var userName = "模擬客戶小明";
         
-        // ★★★ 請修改這裡：填入 server.js 中設定給 'test' 商店的 Secret Key ★★★
-        // 如果您在 server.js 用了 randomBytes，請去 Render Logs 複製出來貼在這裡
-        // 如果您在 server.js 用了固定字串，請直接填入
+        // ★★★ 請確認這裡的 Key 與 server.js 一致 ★★★
         var secretKey = "my_super_secret_key_2025"; 
         
-        // 計算簽章: HMAC-SHA256( userId, secretKey )
-        var signature = CryptoJS.HmacSHA256(userId, secretKey).toString(CryptoJS.enc.Hex);
+        // 1. 計算 HMAC 簽章 (模擬 Liquid 的 hmac_sha256)
+        var dataToSign = "cb_" + customerId;
+        var signature = CryptoJS.HmacSHA256(dataToSign, secretKey).toString(CryptoJS.enc.Hex);
         
+        // 2. 模擬 V28.0 的「隱形商品傳輸」
+        // 直接寫入 sessionStorage，不透過全域變數傳遞，避免 413 錯誤
+        var pData = {
+            id: "prod_001",
+            title: "頂級開發者機械鍵盤 (測試商品)",
+            price: "4999", // 純數字
+            // image: ... (V28.0 已移除圖片傳送)
+            url: window.location.href
+        };
+        sessionStorage.setItem('cb_current_product', JSON.stringify(pData));
+
+        // 3. 模擬 V28.0 的 UserProfile 資料
+        var userProfileData = {
+            email: "tester@example.com",
+            mobile: "0912345678",
+            
+            // 模擬地址 (郵遞區號 + 縣市 + 區 + 路名)
+            address: "520 彰化縣 田中鎮 測試路123號",
+            
+            // 模擬商店網域 (用於後台產生正確連結)
+            shopDomain: "geniusart.cyberbiz.co",
+            
+            totalSpent: "15000",
+            tags: "VIP,測試員",
+            ordersCount: "5",
+            acceptsMarketing: "true",
+            accountStatus: "enabled",
+            riskScore: "0",
+            
+            // 模擬購物車 (只傳數字)
+            cartTotal: 4999,
+            cartCount: 1,
+            
+            loginType: "會員登入"
+        };
+
         console.log("------------------------------------------------");
-        console.log("測試環境模擬數據:");
+        console.log("測試環境 V28.0 模擬數據:");
         console.log("User ID:", userId);
-        console.log("Secret Key:", secretKey);
-        console.log("Generated Signature:", signature);
+        console.log("Signature:", signature);
+        console.log("Current Product (Session):", pData);
+        console.log("User Profile:", userProfileData);
         console.log("------------------------------------------------");
 
+        // 4. 初始化 Widget Config
         window.ChatWidgetConfig = {
             shopId: shopId,
             token: token,
             userId: userId,
             userName: userName,
-            signature: signature, // 帶上簽章
+            signature: signature,
+            userProfile: userProfileData,
+            
+            // V28.0 中，currentProduct 已從這裡移除，改由 sessionStorage 讀取
 
-            // 離線自動回復設定
             autoReplyEnabled: true,
             startHour: 9,
             endHour: 18,
