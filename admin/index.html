@@ -328,7 +328,6 @@
 
             <div id="footprint-box">
                 <span>正在瀏覽：</span>
-                <img id="footprint-img">
                 <a id="footprint-link" href="#" target="_blank">首頁</a>
             </div>
 
@@ -847,7 +846,6 @@
         function renderFootprint(data) {
             const box = document.getElementById('footprint-box');
             const link = document.getElementById('footprint-link');
-            const img = document.getElementById('footprint-img');
 
             if (!data) {
                 box.style.display = 'none'; 
@@ -857,13 +855,6 @@
             box.style.display = 'flex';
             link.href = data.url;
             link.innerText = data.title || data.url;
-            
-            if (data.image) {
-                img.src = data.image;
-                img.style.display = 'block';
-            } else {
-                img.style.display = 'none';
-            }
         }
 
         function renderUserInList(uid, name) {

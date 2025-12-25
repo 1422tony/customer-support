@@ -242,7 +242,6 @@
                     socket.emit('pageChange', {
                         url: window.location.href,
                         title: pData.title,
-                        image: pData.image,
                         price: pData.price // 這裡是純數字，後台可能要自己加 $ 符號
                     });
                 } catch(e) {
