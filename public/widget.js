@@ -225,6 +225,7 @@
             if(list) list.innerHTML = ''; 
             if(btn) btn.style.borderColor = '#00ff00';
 
+            // 1. 傳送 CRM 資料
             if (config.userProfile) {
                 socket.emit('updateUserProfile', {
                     userId: userId,
@@ -232,7 +233,24 @@
                 });
             }
             
-            reportPage();
+            // 2. ★★★ 新邏輯：從 sessionStorage 讀取商品資料 ★★★
+            var storedProduct = sessionStorage.getItem('cb_current_product');
+            
+            if (storedProduct) {
+                try {
+                    var pData = JSON.parse(storedProduct);
+                    socket.emit('pageChange', {
+                        url: window.location.href,
+                        title: pData.title,
+                        image: pData.image,
+                        price: pData.price // 這裡是純數字，後台可能要自己加 $ 符號
+                    });
+                } catch(e) {
+                    reportPage(); // 解析失敗就回報一般頁面
+                }
+            } else {
+                reportPage(); // 沒商品就回報一般頁面
+            }
         });
 
         function reportPage() {
