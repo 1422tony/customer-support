@@ -290,12 +290,13 @@
         // ★★★ 2. 監聽：客服已讀了我的訊息
         socket.on('messagesWereRead', function(data) {
             if (data.reader === 'admin') {
-                // 更新 Widget 介面上的已讀狀態
-                // (因為 Widget 的 UI 結構比較複雜，通常簡單的做法是重整歷史訊息，或者您可以簡單做)
-                // 這裡我們簡單示範：
-                var bubbles = document.querySelectorAll('.cb-msg.me'); // 假設這是客人自己的訊息 class
-                // 實務上 Widget 比較少顯示「客服已讀」，通常是客服看「客人已讀」比較重要
-                // 如果您想做，原理跟 Admin 一樣
+                // 找到所有顯示 "送達" 的標籤，改成 "已讀"
+                var statuses = document.querySelectorAll('.read-status');
+                for (var i = 0; i < statuses.length; i++) {
+                    statuses[i].innerText = '已讀';
+                    statuses[i].style.color = '#0084ff'; // 變藍色
+                    statuses[i].style.fontWeight = 'bold';
+                }
             }
         });
 
@@ -309,6 +310,15 @@
             var row = document.createElement('div');
             row.className = "cb-msg-row " + msg.sender;
             
+            // ★★★ 新增：判斷已讀狀態 (如果是自己發的訊息，才顯示已讀) ★★★
+            let readHtml = '';
+            if (msg.sender === 'user') { // 注意：Widget 端，使用者是 'user'
+                const readText = msg.isRead ? '已讀' : '送達';
+                const readClass = msg.isRead ? 'read' : '';
+                // 加個小樣式讓它靠右
+                readHtml = `<div class="read-status ${readClass}" style="font-size:10px;color:#999;text-align:right;margin-top:-2px;">${readText}</div>`;
+            }
+
             let contentHtml = '';
             
             // ★★★ 修改重點 2：新增商品卡片 (product) 的渲染邏輯 ★★★
@@ -337,7 +347,7 @@
                 contentHtml = `<div class="cb-msg ${msg.sender}">${msg.text}</div>`;
             }
 
-            row.innerHTML = `${contentHtml}<div class="cb-time">${timeStr}</div>`;
+            row.innerHTML = `${contentHtml}<div class="cb-time">${timeStr}</div>${readHtml}`;
             list.appendChild(row);
             list.scrollTop = list.scrollHeight;
         }
