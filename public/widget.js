@@ -225,6 +225,9 @@
             if(list) list.innerHTML = ''; 
             if(btn) btn.style.borderColor = '#00ff00';
 
+            // ★★★ 1. 只要連線(打開視窗)，就告訴 Server 我(user)已讀了客服的訊息
+            socket.emit('markMessagesRead', { targetUserId: userId, reader: 'user' });
+
             // 1. 傳送 CRM 資料
             if (config.userProfile) {
                 socket.emit('updateUserProfile', {
@@ -281,6 +284,18 @@
             } else {
                 dot.className = 'status-dot offline';
                 text.innerText = "客服休息中";
+            }
+        });
+
+        // ★★★ 2. 監聽：客服已讀了我的訊息
+        socket.on('messagesWereRead', function(data) {
+            if (data.reader === 'admin') {
+                // 更新 Widget 介面上的已讀狀態
+                // (因為 Widget 的 UI 結構比較複雜，通常簡單的做法是重整歷史訊息，或者您可以簡單做)
+                // 這裡我們簡單示範：
+                var bubbles = document.querySelectorAll('.cb-msg.me'); // 假設這是客人自己的訊息 class
+                // 實務上 Widget 比較少顯示「客服已讀」，通常是客服看「客人已讀」比較重要
+                // 如果您想做，原理跟 Admin 一樣
             }
         });
 

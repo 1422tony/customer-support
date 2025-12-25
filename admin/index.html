@@ -64,6 +64,9 @@
         .cb-msg-img { max-width: 200px; border-radius: 12px; border: 1px solid #eee; cursor: zoom-in; }
         .cb-time { font-size: 11px; color: #aaa; margin: 4px 2px 0; }
 
+        .read-status { font-size: 10px; color: #999; text-align: right; margin-top: -2px; height: 14px; }
+        .read-status.read { color: #0084ff; font-weight: bold; } /* 已讀變藍色 */
+
         /* ★★★ 商品卡片樣式 (後台顯示用) ★★★ */
         .bubble.product {
             padding: 0;
@@ -309,6 +312,17 @@
                         <input type="checkbox" id="online-toggle" onchange="toggleOnline()">
                         <span class="slider"></span>
                     </label>
+                </div>
+            </div>
+
+            <div style="padding: 10px 15px; border-bottom: 1px solid #eee; background: #fafafa;">
+                <input type="text" id="user-search" placeholder="🔍 搜尋姓名、ID 或標籤..." 
+                       style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 20px; outline:none; font-size:14px;"
+                       onkeyup="filterUsers()">
+                <div style="margin-top: 8px; display: flex; gap: 5px;">
+                    <button onclick="filterByTag('VIP')" style="font-size:12px; padding:2px 10px; border:1px solid #ffe082; background:#fff8e1; color:#ff9800; border-radius:12px; cursor:pointer;">VIP</button>
+                    <button onclick="filterByTag('風險')" style="font-size:12px; padding:2px 10px; border:1px solid #ffcdd2; background:#ffebee; color:#c62828; border-radius:12px; cursor:pointer;">風險</button>
+                    <button onclick="filterByTag('')" style="font-size:12px; padding:2px 10px; border:1px solid #ddd; background:#fff; color:#666; border-radius:12px; cursor:pointer;">全部</button>
                 </div>
             </div>
 
@@ -633,6 +647,17 @@
                 alert(msg);
                 document.getElementById('p-title').placeholder = "請手動輸入";
             });
+
+            socket.on('messagesWereRead', (data) => {
+                if (data.reader === 'user' && activeUser) {
+                    // 如果是使用者讀了訊息，就把畫面上所有「送達」改成「已讀」
+                    const statuses = document.querySelectorAll('.read-status');
+                    statuses.forEach(el => {
+                        el.innerText = '已讀';
+                        el.classList.add('read');
+                    });
+                }
+            });
         }
 
         // --- 輔助函式 ---
@@ -775,6 +800,11 @@
         function selectUser(uid, name) {
             activeUser = uid;
             
+            // ★★★ 新增：告訴 Server 我讀了這個人的訊息
+            if(socket) {
+                socket.emit('markMessagesRead', { targetUserId: uid, reader: 'admin' });
+            }
+            
             document.querySelectorAll('.user-row').forEach(e => e.classList.remove('active'));
             document.querySelector(`.user-row[data-id="${uid}"]`).classList.add('active');
             
@@ -888,6 +918,15 @@
             const box = document.getElementById('messages');
             var date = new Date(msg.timestamp);
             var timeStr = date.getHours().toString().padStart(2, '0') + ":" + date.getMinutes().toString().padStart(2, '0');
+            
+            // ★ 判斷已讀狀態 (如果是自己發的訊息，才顯示已讀)
+            let readHtml = '';
+            if (msg.sender === 'admin') {
+                const readText = msg.isRead ? '已讀' : '送達';
+                const readClass = msg.isRead ? 'read' : '';
+                readHtml = `<div class="read-status ${readClass}">${readText}</div>`;
+            }
+
             const row = document.createElement('div');
             row.className = `cb-msg-row ${msg.sender}`;
             
@@ -917,7 +956,7 @@
                 contentHtml = `<div class="bubble ${msg.sender}">${msg.text}</div>`;
             }
 
-            row.innerHTML = `${contentHtml}<div class="cb-time">${timeStr}</div>`;
+            row.innerHTML = `${contentHtml}<div class="cb-time">${timeStr}</div>${readHtml}`;
             box.appendChild(row);
             box.scrollTop = box.scrollHeight;
         }
@@ -1095,6 +1134,37 @@
             });
             
             closeProductModal();
+        }
+
+        // ★★★ 使用者搜尋與篩選邏輯 ★★★
+        function filterUsers() {
+            const input = document.getElementById('user-search');
+            const filter = input.value.toLowerCase();
+            const list = document.getElementById('user-list');
+            const rows = list.getElementsByClassName('user-row');
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const uid = row.getAttribute('data-id');
+                const name = row.innerText.toLowerCase(); // 抓取顯示在列表上的名字和ID
+                
+                // 進階：從 userProfiles 全域變數抓取標籤資料
+                const profile = userProfiles[uid] || {};
+                const tags = (profile.tags || "").toLowerCase();
+
+                // 搜尋範圍：名字、ID、標籤
+                if (name.includes(filter) || tags.includes(filter) || uid.includes(filter)) {
+                    row.style.display = ""; // 顯示
+                } else {
+                    row.style.display = "none"; // 隱藏
+                }
+            }
+        }
+
+        function filterByTag(tagName) {
+            const input = document.getElementById('user-search');
+            input.value = tagName;
+            filterUsers(); // 觸發搜尋
         }
     </script>
 </body>

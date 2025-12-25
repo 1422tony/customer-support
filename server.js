@@ -385,6 +385,26 @@ io.on('connection', async (socket) => {
             });
         });
 
+    // ★★★ 新增：已讀狀態更新 ★★★
+    socket.on('markMessagesRead', async ({ targetUserId, reader }) => {
+        // reader: 'admin' 或 'user'
+        // targetUserId: 對話對象的 ID
+        
+        // 1. 更新資料庫：把「對方」寄來的訊息設為已讀
+        const senderToMark = reader === 'admin' ? 'user' : 'admin';
+        
+        await Message.updateMany(
+            { shopId, userId: targetUserId, sender: senderToMark, isRead: false },
+            { $set: { isRead: true } }
+        );
+
+        // 2. 通知房間內的所有人 (包含對方)，訊息已被讀取
+        // 這樣對方的手機/電腦上，該訊息就會變成「已讀」
+        io.to(`${shopId}_${targetUserId}`).emit('messagesWereRead', {
+            reader: reader
+        });
+    });
+
         return; 
     }
 
