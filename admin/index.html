@@ -653,13 +653,23 @@
                 document.getElementById('p-title').placeholder = "請手動輸入";
             });
 
+            // ★★★ 修復：當收到「對方已讀」的通知時，更新介面 ★★★
             socket.on('messagesWereRead', (data) => {
+                // 如果是客人 (user) 讀了訊息，且我正在跟這個人聊天 (activeUser)
                 if (data.reader === 'user' && activeUser) {
-                    // 如果是使用者讀了訊息，就把畫面上所有「送達」改成「已讀」
+                    
+                    // 1. 抓出所有狀態是 "送達" 的標籤
+                    // 注意：這裡我們用寬鬆的選取方式，抓所有 read-status
                     const statuses = document.querySelectorAll('.read-status');
+                    
                     statuses.forEach(el => {
-                        el.innerText = '已讀';
-                        el.classList.add('read');
+                        // 2. 只要不是已讀，就通通改成已讀
+                        if (el.innerText !== '已讀') {
+                            el.innerText = '已讀';
+                            el.classList.add('read'); // 變藍色
+                            el.style.color = '#0084ff';
+                            el.style.fontWeight = 'bold';
+                        }
                     });
                 }
             });
