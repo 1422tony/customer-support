@@ -660,7 +660,7 @@
                 // 如果是客人 (user) 讀了訊息，且我正在跟這個人聊天 (activeUser)
                 if (data.reader === 'user' && activeUser) {
                     
-                    // 1. 抓出所有狀態是 "送達" 的標籤
+                    // 1. 抓出所有狀態是 "已傳送" 的標籤
                     // 注意：這裡我們用寬鬆的選取方式，抓所有 read-status
                     const statuses = document.querySelectorAll('.read-status');
                     
@@ -936,7 +936,7 @@
             // ★ 判斷已讀狀態 (如果是自己發的訊息，才顯示已讀)
             let readHtml = '';
             if (msg.sender === 'admin') {
-                const readText = msg.isRead ? '已讀' : '送達';
+                const readText = msg.isRead ? '已讀' : '已傳送';
                 const readClass = msg.isRead ? 'read' : '';
                 readHtml = `<div class="read-status ${readClass}">${readText}</div>`;
             }

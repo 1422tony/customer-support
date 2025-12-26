@@ -303,7 +303,7 @@
         // ★★★ 2. 監聽：客服已讀了我的訊息
         socket.on('messagesWereRead', function(data) {
             if (data.reader === 'admin') {
-                // 找到所有顯示 "送達" 的標籤，改成 "已讀"
+                // 找到所有顯示 "已傳送" 的標籤，改成 "已讀"
                 var statuses = document.querySelectorAll('.read-status');
                 for (var i = 0; i < statuses.length; i++) {
                     statuses[i].innerText = '已讀';
@@ -326,7 +326,7 @@
             // ★★★ 新增：判斷已讀狀態 (如果是自己發的訊息，才顯示已讀) ★★★
             let readHtml = '';
             if (msg.sender === 'user') { // 注意：Widget 端，使用者是 'user'
-                const readText = msg.isRead ? '已讀' : '送達';
+                const readText = msg.isRead ? '已讀' : '已傳送';
                 const readClass = msg.isRead ? 'read' : '';
                 readHtml = `<div class="read-status ${readClass}">${readText}</div>`;
             }
