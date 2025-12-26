@@ -24,6 +24,17 @@
         .user-row:active { background: #f5f5f5; }
         .user-row.active { background: #e3f2fd; border-left: 4px solid #0084ff; }
         .unread-badge { background-color: #ff3b30; color: white; border-radius: 12px; padding: 3px 8px; font-size: 12px; font-weight: bold; display: none; }
+        .user-row-tags {
+            color: #007bff;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding-left: 8px;
+            margin-left: 8px;
+            border-left: 1px solid #ddd;
+            max-width: 100px; /* Prevent it from taking too much space */
+        }
 
         #chat-main { flex: 1; display: flex; flex-direction: column; background: white; height: 100%; position: relative; z-index: 1; }
         
@@ -1006,24 +1017,29 @@
             div.className = 'user-row';
             div.setAttribute('data-id', uid);
             
-            // ★ 檢查這個人有沒有未讀 (從全域變數 unreadCounts 拿)
             const count = unreadCounts[uid] || 0;
             const badgeDisplay = count > 0 ? 'inline-block' : 'none';
             const badgeText = count > 99 ? '99+' : count;
 
+            // Get tags for the user
+            const profile = userProfiles[uid] || {};
+            const tags = profile.tags || '';
+            const tagsHtml = tags ? `<span class="user-row-tags" title="${tags}">${tags.replace(/,/g, ', ')}</span>` : '';
+
             div.innerHTML = `
-                <div style="display:flex; flex-direction:column;">
-                    <span style="font-weight:500; font-size:16px;">${name}</span>
-                    <span style="font-size:12px;color:#999; margin-top:4px;">${uid}</span>
+                <div style="display:flex; flex-direction:column; min-width:0; flex-grow: 1;">
+                    <span style="font-weight:500; font-size:16px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${name}</span>
+                    <div style="display:flex; align-items:center; font-size:12px; color:#999; margin-top:4px;">
+                        <span style="flex-shrink: 0;">${uid}</span>
+                        ${tagsHtml}
+                    </div>
                 </div>
-                <span class="unread-badge" style="display:${badgeDisplay}">${badgeText}</span>
+                <span class="unread-badge" style="display:${badgeDisplay}; margin-left: 5px; flex-shrink: 0;">${badgeText}</span>
             `;
             
             div.onclick = () => selectUser(uid, name);
             
             const list = document.getElementById('user-list');
-            // 為了讓有未讀的人排在上面，可以用 prepend
-            // 但如果您希望照時間排，這裡可能要調整，目前維持 prepend (最新的人在最上)
             list.prepend(div); 
         }
 
