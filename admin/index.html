@@ -754,8 +754,25 @@
                 linkTitle = "前往 Shopify 後台";
             }
 
+            // ★★★ 新增：內部備註區塊 HTML ★★★
+            const noteHtml = `
+                <div class="data-row" style="flex-direction:column; align-items:flex-start; background:#fff8e1; border:1px solid #ffe082; padding:10px; border-radius:8px; margin-bottom:15px;">
+                    <div class="data-label" style="margin-bottom:5px; color:#f57f17; font-weight:bold;">🟡 內部備註 (僅客服可見)</div>
+                    <textarea id="note-input-${userId}" 
+                        style="width:100%; height:60px; border:1px solid #ddd; border-radius:4px; padding:5px; resize:none; font-size:13px; font-family:sans-serif;" 
+                        placeholder="在此輸入客戶特徵、待辦事項..."
+                    >${data.internalNote || ''}</textarea>
+                    <div style="width:100%; text-align:right; margin-top:5px;">
+                        <button onclick="saveInternalNote('${userId}')" 
+                            style="padding:4px 12px; background:#ffb300; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;">
+                            💾 儲存備註
+                        </button>
+                    </div>
+                </div>
+            `;
+
             // 4. ★★★ 聯絡資訊 (新增地址顯示) ★★★
-            const infoHtml = `
+            const infoHtml = noteHtml + `
                 <div class="data-row">
                     <div class="data-label">聯絡資訊</div>
                     <div class="data-value">📧 ${data.email || "--"}</div>
@@ -1186,6 +1203,37 @@
             const input = document.getElementById('user-search');
             input.value = tagName;
             filterUsers(); // 觸發搜尋
+        }
+
+        // ★★★ 儲存內部備註 ★★★
+        function saveInternalNote(uid) {
+            const input = document.getElementById(`note-input-${uid}`);
+            if (!input) return;
+
+            const noteContent = input.value;
+            
+            // 1. 發送給 Server
+            if (socket) {
+                socket.emit('adminSaveNote', {
+                    userId: uid,
+                    note: noteContent
+                });
+            }
+
+            // 2. 更新本地緩存 (這樣切換回來才不會不見)
+            if (userProfiles[uid]) {
+                userProfiles[uid].internalNote = noteContent;
+            }
+
+            // 3. 按鈕回饋 (視覺效果)
+            const btn = input.nextElementSibling.querySelector('button');
+            const originalText = btn.innerText;
+            btn.innerText = "✅ 已儲存";
+            btn.style.background = "#4caf50";
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.background = "#ffb300";
+            }, 1000);
         }
     </script>
 </body>

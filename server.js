@@ -67,7 +67,10 @@ const UserProfileSchema = new mongoose.Schema({
     address: String,      // 存地址
     cartTotal: Number,    // 存總金額 (安全數字)
     cartCount: Number,    // 存總數量 (安全數字)
-    // ------------------
+    
+    // ★★★ 新增：內部備註欄位 ★★★
+    internalNote: String, 
+    // -------------------------
 
     tags: String,
     totalSpent: String,
@@ -403,6 +406,21 @@ io.on('connection', async (socket) => {
                 userId: 'admin',
                 isTyping: data.isTyping
             });
+        });
+
+        // ★★★ 新增：管理員儲存內部備註 ★★★
+        socket.on('adminSaveNote', async (data) => {
+            // data: { userId, note }
+            try {
+                await UserProfile.findOneAndUpdate(
+                    { shopId: shopId, userId: data.userId },
+                    { $set: { internalNote: data.note } }
+                );
+                // 儲存成功後，如果不需廣播，Server 端這邊就完成了
+                // console.log(`[CRM] 已更新備註: ${data.userId}`);
+            } catch (err) {
+                console.error("備註儲存失敗", err);
+            }
         });
 
         return; 
