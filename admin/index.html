@@ -796,7 +796,7 @@
             // ★★★ 新增：內部備註區塊 HTML ★★★
             const noteHtml = `
                 <div class="data-row">
-                    <div class="data-label">內部備註 (僅客服可見)</div>
+                    <div class="data-label">內部備註</div>
                     <textarea id="note-input-${userId}" class="note-textarea" placeholder="在此輸入客戶特徵、待辦事項...">${data.internalNote || ''}</textarea>
                     <div class="note-button-container">
                         <button onclick="saveInternalNote('${userId}')" class="note-save-btn">
