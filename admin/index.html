@@ -1363,7 +1363,8 @@
             }
 
             // 3. 按鈕回饋 (視覺效果)
-            const btn = document.querySelector(`.note-section button[onclick="saveInternalNote('${uid}')"]`);
+            // 直接抓取該 onclick 屬性的按鈕即可，不用管外層 class
+            const btn = document.querySelector(`button[onclick="saveInternalNote('${uid}')"]`);
             if (!btn) return;
             const originalText = btn.innerText;
 
