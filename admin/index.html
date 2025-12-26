@@ -138,6 +138,30 @@
         .tag.vip { background: #fff8e1; color: #ff9800; border: 1px solid #ffe082; }
         .tag.risk { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
 
+        /* 標籤編輯器樣式 */
+        .tag-container { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; }
+        .tag-pill { 
+            background: #e3f2fd; color: #1565c0; 
+            padding: 4px 8px; border-radius: 12px; font-size: 12px; 
+            display: flex; align-items: center; gap: 5px; 
+            border: 1px solid #bbdefb;
+        }
+        .tag-remove { cursor: pointer; font-weight: bold; color: #ef5350; }
+        .tag-remove:hover { color: #c62828; }
+        .tag-input-box { display: flex; gap: 5px; margin-top: 5px; }
+
+        /* 標籤編輯器樣式 */
+        .tag-container { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; }
+        .tag-pill { 
+            background: #e3f2fd; color: #1565c0; 
+            padding: 4px 8px; border-radius: 12px; font-size: 12px; 
+            display: flex; align-items: center; gap: 5px; 
+            border: 1px solid #bbdefb;
+        }
+        .tag-remove { cursor: pointer; font-weight: bold; color: #ef5350; }
+        .tag-remove:hover { color: #c62828; }
+        .tag-input-box { display: flex; gap: 5px; margin-top: 5px; }
+
         .stat-box { display: flex; justify-content: space-between; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .stat-item { text-align: center; flex: 1; }
         .stat-num { font-size: 18px; font-weight: bold; color: #0084ff; display: block; }
@@ -807,6 +831,46 @@
             `;
 
             // 4. ★★★ 聯絡資訊 (新增地址顯示) ★★★
+            // ★★★ 改造：互動式標籤區塊 ★★★
+            // 1. 先處理目前的標籤字串轉陣列
+            let currentTags = [];
+            if (data.tags && data.tags.trim() !== "") {
+                // 處理逗號分隔 (支援全形或半形逗號)
+                currentTags = data.tags.replace(/，/g, ',').split(',').filter(t => t.trim() !== '');
+            }
+
+            // 2. 生成標籤 HTML
+            let tagsHtml = currentTags.map(tag => `
+                <div class="tag-pill">
+                    ${tag}
+                    <span class="tag-remove" onclick="removeUserTag('${userId}', '${tag}')">×</span>
+                </div>
+            `).join('');
+
+            if (currentTags.length === 0) tagsHtml = '<span style="color:#999;font-size:12px;">無標籤</span>';
+
+            // 3. 組合完整的標籤編輯區塊
+            const tagEditorHtml = `
+                <div class="data-row" style="flex-direction:column; align-items:flex-start;">
+                    <div class="data-label" style="margin-bottom:5px;">🏷️ 客戶標籤 (TAGS)</div>
+                    
+                    <div class="tag-container" id="tag-container-${userId}">
+                        ${tagsHtml}
+                    </div>
+
+                    <div class="tag-input-box" style="width:100%;">
+                        <input type="text" id="tag-input-${userId}" placeholder="輸入標籤 (如: VIP)" 
+                            style="flex:1; padding:5px; border:1px solid #ddd; border-radius:4px; font-size:12px;"
+                            onkeypress="if(event.key==='Enter') addUserTag('${userId}')">
+                        <button onclick="addUserTag('${userId}')" 
+                            style="padding:4px 10px; background:#0084ff; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px;">
+                            +
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // 4. ★★★ 聯絡資訊 (新增地址顯示) ★★★
             const infoHtml = noteHtml + `
                 <div class="data-row">
                     <div class="data-label">聯絡資訊</div>
@@ -830,31 +894,12 @@
                         <span class="stat-desc">訂單數 🔗</span>
                     </div>
                 </div>
-
-                <div class="data-row">
-                    <div class="data-label">標籤 (Tags)</div>
-                    <div class="data-value" id="p-tags-container"></div>
-                </div>
-            `;
+            ` + tagEditorHtml;
 
             // 5. 組合 HTML
             const body = document.querySelector('.profile-body');
             body.innerHTML = alertHtml + cartHtml + infoHtml;
 
-            // 6. 處理標籤
-            const tagsContainer = document.getElementById('p-tags-container');
-            if (data.tags && data.tags.trim() !== '') {
-                data.tags.split(',').forEach(tag => {
-                    const span = document.createElement('span');
-                    span.className = 'tag';
-                    if(tag.includes('VIP') || tag.includes('黑名單')) span.className += ' vip'; 
-                    if(tag.includes('黑名單') || tag.includes('未取貨') || tag.includes('風險')) span.className += ' risk';
-                    span.innerText = tag;
-                    tagsContainer.appendChild(span);
-                });
-            } else {
-                tagsContainer.innerHTML = '<span style="color:#999;font-style:italic;">無標籤</span>';
-            }
         }
 
         function toggleProfile() {
@@ -1274,6 +1319,66 @@
                 btn.style.backgroundColor = ""; // Revert to CSS default blue
                 btn.disabled = false;
             }, 2000);
+        }
+
+        // ★★★ 新增標籤 ★★★
+        function addUserTag(uid) {
+            const input = document.getElementById(`tag-input-${uid}`);
+            const newTag = input.value.trim();
+            if (!newTag) return;
+
+            // 1. 取得當前標籤
+            let profile = userProfiles[uid] || {};
+            let currentTagsStr = profile.tags || "";
+            let tagsArray = currentTagsStr.replace(/，/g, ',').split(',').filter(t => t.trim() !== '');
+
+            // 2. 避免重複
+            if (tagsArray.includes(newTag)) {
+                alert("標籤已存在");
+                input.value = '';
+                return;
+            }
+
+            // 3. 加入新標籤並儲存
+            tagsArray.push(newTag);
+            updateTagsAndSave(uid, tagsArray);
+            input.value = ''; // 清空輸入框
+        }
+
+        // ★★★ 移除標籤 ★★★
+        function removeUserTag(uid, tagToRemove) {
+            if(!confirm(`確定要移除標籤「${tagToRemove}」嗎？`)) return;
+
+            let profile = userProfiles[uid] || {};
+            let currentTagsStr = profile.tags || "";
+            let tagsArray = currentTagsStr.replace(/，/g, ',').split(',').filter(t => t.trim() !== '');
+
+            // 過濾掉要刪除的標籤
+            tagsArray = tagsArray.filter(t => t !== tagToRemove);
+            updateTagsAndSave(uid, tagsArray);
+        }
+
+        // ★★★ 核心：更新並傳送給伺服器 ★★★
+        function updateTagsAndSave(uid, tagsArray) {
+            const newTagsStr = tagsArray.join(',');
+
+            // 1. 更新本地資料 (讓畫面不用重整也能變)
+            if (userProfiles[uid]) {
+                userProfiles[uid].tags = newTagsStr;
+            }
+
+            // 2. 重新渲染該區塊 (為了簡單，這裡直接呼叫 renderProfile 可能會導致輸入框失焦)
+            // 更好的做法是只更新 DOM，但為了程式碼簡單，我們重繪右側欄位
+            // 如果您發現重繪會閃爍，我們可以改寫 DOM 操作
+            renderProfile(uid); 
+
+            // 3. 發送給 Server 儲存
+            if (socket) {
+                socket.emit('adminUpdateTags', {
+                    userId: uid,
+                    tags: newTagsStr
+                });
+            }
         }
     </script>
 </body>

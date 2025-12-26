@@ -423,6 +423,23 @@ io.on('connection', async (socket) => {
             }
         });
 
+        // ★★★ 新增：管理員手動更新標籤 ★★★
+        socket.on('adminUpdateTags', async (data) => {
+            // data: { userId, tags }  (tags 是一個字串，例如 "VIP,奧客")
+            try {
+                await UserProfile.findOneAndUpdate(
+                    { shopId: shopId, userId: data.userId },
+                    { $set: { tags: data.tags } },
+                    { new: true, upsert: true } // 確保沒有資料時會建立
+                );
+                // 廣播給後台自己 (確保多個管理員同時看時會同步)，或是單純回傳成功
+                // 這裡簡單做，Admin 介面自己會更新
+                // console.log(`[CRM] 標籤已更新: ${data.userId} -> ${data.tags}`);
+            } catch (err) {
+                console.error("標籤更新失敗", err);
+            }
+        });
+
         return; 
     }
 
