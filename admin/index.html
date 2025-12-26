@@ -799,36 +799,41 @@
 
             // ★★★ 準備後台連結 (動態網域版) ★★★
             let backendUrl = "javascript:void(0);"; 
-            let linkStyle = "color:#999; cursor:default; text-decoration:none;"; 
-            let linkTitle = "無後台連結";
-
+            
             // 🟢 判斷 1: Cyberbiz (前綴 cb_)
             if (userId.startsWith('cb_')) {
                 const rawId = userId.replace(/^cb_/, '');
-                
-                // ★★★ 核心修改：使用傳過來的 shopDomain，如果沒有則用預設值 ★★★
-                // 這樣不管是哪一家店，都會連到他自家的 Cyberbiz 後台
                 const domain = data.shopDomain || "geniusart.cyberbiz.co"; 
-                
                 backendUrl = `https://${domain}/admin/members/${rawId}?tab=orders`;
-                linkStyle = "color:#0084ff; text-decoration:underline; cursor:pointer;";
-                linkTitle = `前往 ${domain} 後台`;
             }
             // 🟡 Shopline / Shopify 未來也可以用同樣邏輯擴充
             else if (userId.startsWith('sl_')) {
                 const rawId = userId.replace(/^sl_/, '');
-                // 假設 Shopline 網址格式 (需確認)
                 backendUrl = `https://admin.shoplineapp.com/customers/${rawId}`; 
-                linkStyle = "color:#00b900; text-decoration:underline; cursor:pointer;";
-                linkTitle = "前往 Shopline 後台";
             }
             // 🟠 判斷 3: Shopify (前綴 sp_) -> 未來擴充用
             else if (userId.startsWith('sp_')) {
                 const rawId = userId.replace(/^sp_/, '');
-                // 假設 Shopify 網址格式
                 backendUrl = `https://admin.shopify.com/store/my-store/customers/${rawId}`;
-                linkStyle = "color:#95bf47; text-decoration:underline; cursor:pointer;";
-                linkTitle = "前往 Shopify 後台";
+            }
+
+            // ★★★ 新增：訂單數的 HTML 邏輯 ★★★
+            let ordersHtml = '';
+            const isLink = backendUrl !== "javascript:void(0);";
+            if(isLink) {
+                ordersHtml = `
+                    <a href="${backendUrl}" target="_blank" style="text-decoration:none;" title="前往後台查看訂單">
+                        <span class="stat-num" style="color:#0084ff; text-decoration:underline; cursor:pointer;">
+                            ${data.ordersCount || 0}
+                        </span>
+                    </a>
+                    <span class="stat-desc">訂單數 🔗</span>
+                `;
+            } else {
+                ordersHtml = `
+                    <span class="stat-num">${data.ordersCount || 0}</span>
+                    <span class="stat-desc">訂單數</span>
+                `;
             }
 
             // ★★★ 新增：內部備註區塊 HTML ★★★
@@ -844,7 +849,6 @@
                 </div>
             `;
 
-            // 4. ★★★ 聯絡資訊 (新增地址顯示) ★★★
             // ★★★ 改造：互動式標籤區塊 ★★★
             // 1. 先處理目前的標籤字串轉陣列
             let currentTags = [];
@@ -900,12 +904,7 @@
                     </div>
                     
                     <div class="stat-item">
-                        <a href="${backendUrl}" target="_blank" style="text-decoration:none;" title="${linkTitle}">
-                            <span class="stat-num" style="${linkStyle}">
-                                ${data.ordersCount || 0}
-                            </span>
-                        </a>
-                        <span class="stat-desc">訂單數 🔗</span>
+                        ${ordersHtml}
                     </div>
                 </div>
             ` + tagEditorHtml;
