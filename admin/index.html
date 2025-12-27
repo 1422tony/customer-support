@@ -1070,6 +1070,14 @@
                 let p = {};
                 try { p = JSON.parse(msg.text); } catch(e){}
                 
+                // ★★★【修正】將 detailsHtml 移到卡片內部，並調整樣式 ★★★
+                const detailsInCardHtml = `
+                    <div class="cb-details" style="padding: 0px 12px 8px; justify-content: flex-end;">
+                        ${readHtml}
+                        <div class="cb-time">${timeStr}</div>
+                    </div>
+                `;
+
                 contentHtml = `
                     <div class="bubble product">
                         <img src="${p.image || '/icon/no-image.png'}" class="p-card-img">
@@ -1078,8 +1086,15 @@
                             <div class="p-card-price">${p.price}</div>
                             <a href="${p.url}" target="_blank" class="p-card-btn">查看商品</a>
                         </div>
+                        ${detailsInCardHtml} 
                     </div>
                 `;
+                
+                // ★★★【修正】因為 details 已經包進去了，所以 row 的 innerHTML 直接是 contentHtml
+                row.innerHTML = contentHtml;
+                box.appendChild(row);
+                box.scrollTop = box.scrollHeight;
+                return; // ★★★【修正】提早 return，避免執行到後面的邏輯
             }
             else {
                 contentHtml = `<div class="bubble ${msg.sender}">${msg.text}</div>`;
